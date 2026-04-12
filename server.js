@@ -158,4 +158,5 @@ app.put('/api/hoadon/:id', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.listen(5000, () => console.log(`Backend chạy tại port 5000`));
+const PORT = process.env.PORT || 10000; // Render thường dùng port 10000
+app.listen(PORT, () => console.log(`Server chạy tại port ${PORT}`));
