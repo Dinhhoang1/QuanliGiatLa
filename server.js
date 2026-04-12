@@ -162,4 +162,10 @@ app.put('/api/hoadon/:id', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 10000; // Render thường dùng port 10000
+const path = require('path');
+
+// Dòng này cực kỳ quan trọng: Nó bảo Server nếu ai vào trang chủ thì đưa file index.html cho họ
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 app.listen(PORT, () => console.log(`Server chạy tại port ${PORT}`));
