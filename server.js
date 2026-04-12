@@ -8,11 +8,14 @@ app.use(cors());
 
 // --- CẤU HÌNH DATABASE ---
 const config = {
-    user: 'sa',
-    password: '123456789', // <-- Nhớ đổi đúng mật khẩu của bạn
-    server: 'localhost',
+    user: 'admin-hoang', // Username bạn tạo trên Azure
+    password: 'Hh12345@', 
+    server: 'server-hoang-2026.database.windows.net', // Địa chỉ Azure cấp
     database: 'QuanliGiatLa', 
-    options: { encrypt: false, trustServerCertificate: true },
+    options: {
+        encrypt: true, // Azure bắt buộc phải có cái này
+        trustServerCertificate: false 
+    },
     port: 1433
 };
 
