@@ -2,14 +2,13 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Hệ Thống Giặt Là - Phân Quyền Chuẩn</title>
+    <title>Hệ Thống Giặt Là - Public Version</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f4f6f9; margin: 0; display: flex; height: 100vh; }
         .sidebar { width: 260px; background: #2c3e50; color: white; padding: 20px; display: flex; flex-direction: column; }
         .sidebar h2 { text-align: center; border-bottom: 1px solid #34495e; padding-bottom: 15px; margin-top: 0; }
         .menu-item { padding: 15px; margin: 5px 0; background: #34495e; border-radius: 5px; cursor: pointer; transition: 0.3s; }
         .menu-item:hover, .menu-item.active { background: #3498db; }
-        /* Nút menu nào có manager-only mới bị ẩn với NV */
         .manager-only { display: none; }
         .role-box { margin-top: auto; background: #1abc9c; padding: 15px; border-radius: 5px; text-align: center; }
         .main-content { flex: 1; padding: 30px; overflow-y: auto; }
@@ -60,7 +59,7 @@
             </div>
 
             <div class="row-flex">
-                <select id="dvSelect" style="flex: 2;"><option>Đang tải...</option></select>
+                <select id="dvSelect" style="flex: 2;"><option>Đang tải dịch vụ từ Azure...</option></select>
                 <input type="number" id="soLuong" value="1" min="1" style="flex: 1;">
                 <button onclick="themVaoGio()" style="flex: 1; background: #f39c12;">Thêm Dịch vụ</button>
             </div>
@@ -72,16 +71,16 @@
 
             <div style="margin-top: 15px; background: #fff3cd; padding: 15px; border-left: 5px solid #ffc107;">
                 <label style="font-weight: bold; color: #d35400;">🎁 Chọn Mã Giảm Giá CÒN HẠN:</label>
-                <select id="ggSelect" onchange="renderGio()"><option value="0">Không dùng</option></select>
+                <select id="ggSelect" onchange="tinhTongTien()"><option value="0">Không dùng</option></select>
             </div>
 
             <h2 style="text-align: right; color: #e74c3c;">Thanh toán: <span id="tongTien">0</span> đ</h2>
-            <button onclick="chotDon()" class="btn-success" style="font-size: 18px; padding: 15px;">CHỐT ĐƠN HÀNG (Mặc định: Chờ xử lý)</button>
+            <button onclick="chotDon()" class="btn-success" style="font-size: 18px; padding: 15px; width: 100%;">CHỐT ĐƠN HÀNG</button>
         </div>
 
         <div id="tab-thong-ke" class="page-section">
-            <h2>📊 Danh Sách Hóa Đơn</h2>
-            <p><i>* Nhân viên chỉ được xem. Quản lý mới được phép thay đổi trạng thái tiến độ.</i></p>
+            <h2>📊 Danh Sách Hóa Đơn (Thời gian thực)</h2>
+            <p><i>* Dữ liệu được lấy trực tiếp từ Azure SQL Database.</i></p>
             <table>
                 <thead><tr><th>Mã HĐ</th><th>Khách Hàng</th><th>Ngày Lập</th><th>Thành Tiền</th><th>Cập Nhật Trạng Thái</th></tr></thead>
                 <tbody id="bangHoaDon"></tbody>
@@ -123,7 +122,9 @@
     </div>
 
     <script>
+        // KIỂM TRA LINK RENDER: Hãy chắc chắn link này không thừa/thiếu ký tự
         const API_URL = 'https://tiemgiatvandung.onrender.com/api';
+        
         let gioHang = [];
         let dsDichVuGoc = [];
         let dsKhachHang = [];
@@ -132,15 +133,9 @@
 
         function changeRole() {
             const role = document.getElementById('roleSelect').value;
-            // Chỉ ẩn/hiện cái Nút bấm (Menu Item) bên Sidebar thôi, không đụng vào Nội dung bên phải
             document.querySelectorAll('.menu-item.manager-only').forEach(el => el.style.display = role === 'NV02' ? 'block' : 'none');
-            
             const activeTab = document.querySelector('.page-section.active').id;
-            
-            // Nếu đang ở Tab Hóa Đơn, tải lại để cập nhật quyền chỉnh sửa trạng thái
             if(activeTab === 'tab-thong-ke') loadBangHoaDon();
-
-            // Nếu NV đang lỡ đứng ở tab cấm, tự động đẩy về tab Lập đơn
             if(role === 'NV01' && (activeTab === 'tab-dich-vu' || activeTab === 'tab-giam-gia')) {
                 switchTab('tab-tao-don', document.querySelectorAll('.menu-item')[0]);
             }
@@ -149,7 +144,6 @@
         function switchTab(tabId, element) {
             document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
             element.classList.add('active');
-            
             document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             
@@ -159,18 +153,32 @@
             if(tabId === 'tab-tao-don') initTaoDon();
         }
 
+        // HÀM KHỞI TẠO DỮ LIỆU CÓ XỬ LÝ LỖI
         async function initTaoDon() {
-            const resKH = await fetch(`${API_URL}/khachhang`);
-            dsKhachHang = await resKH.json();
-            document.getElementById('danhSachSDT').innerHTML = dsKhachHang.map(kh => `<option value="${kh.sdt}">`).join('');
+            try {
+                const [resKH, resDV, resGG] = await Promise.all([
+                    fetch(`${API_URL}/khachhang`),
+                    fetch(`${API_URL}/dichvu`),
+                    fetch(`${API_URL}/giamgia`)
+                ]);
 
-            const resDV = await fetch(`${API_URL}/dichvu`);
-            dsDichVuGoc = await resDV.json();
-            document.getElementById('dvSelect').innerHTML = dsDichVuGoc.map(dv => `<option value="${dv.ma_dv}">${dv.ten_dv} - ${Number(dv.don_gia).toLocaleString('vi-VN')}đ</option>`).join('');
+                dsKhachHang = await resKH.json();
+                document.getElementById('danhSachSDT').innerHTML = dsKhachHang.map(kh => `<option value="${kh.sdt}">`).join('');
 
-            const resGG = await fetch(`${API_URL}/giamgia`);
-            dsGiamGiaGoc = await resGG.json();
-            capNhatDropdownGiamGia(); 
+                dsDichVuGoc = await resDV.json();
+                const dvSelect = document.getElementById('dvSelect');
+                if (dsDichVuGoc.length > 0) {
+                    dvSelect.innerHTML = dsDichVuGoc.map(dv => `<option value="${dv.ma_dv}">${dv.ten_dv} - ${Number(dv.don_gia).toLocaleString('vi-VN')}đ</option>`).join('');
+                } else {
+                    dvSelect.innerHTML = '<option>Database trống!</option>';
+                }
+
+                dsGiamGiaGoc = await resGG.json();
+                capNhatDropdownGiamGia(); 
+            } catch (err) {
+                console.error("Lỗi kết nối Render/Azure:", err);
+                document.getElementById('dvSelect').innerHTML = '<option>Lỗi kết nối Server!</option>';
+            }
         }
 
         function tuDongDienTen() {
@@ -184,8 +192,7 @@
             if(!dv) return;
             const sl = parseInt(document.getElementById('soLuong').value);
             const item = gioHang.find(i => i.ma_dv === ma_dv);
-            if(item) item.so_luong += sl; 
-            else gioHang.push({ ma_dv: dv.ma_dv, ten_dv: dv.ten_dv, don_gia: Number(dv.don_gia), so_luong: sl });
+            if(item) item.so_luong += sl; else gioHang.push({ ma_dv: dv.ma_dv, ten_dv: dv.ten_dv, don_gia: Number(dv.don_gia), so_luong: sl });
             renderGio();
         }
 
@@ -238,48 +245,65 @@
             if(gioHang.length === 0) return alert("Giỏ hàng trống!");
 
             const payload = { sdt, ten_kh: ten, dia_chi, ma_nv, ma_gg: ma_gg === "0" ? null : ma_gg, thanh_tien: window.thanhTienCuoiCung, ds_dich_vu: gioHang };
-            const res = await fetch(`${API_URL}/hoadon`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-            const data = await res.json();
             
-            alert(data.message);
-            gioHang = []; renderGio();
-            document.getElementById('sdtKH').value = ''; document.getElementById('tenKH').value = ''; document.getElementById('diaChiKH').value = '';
+            try {
+                const res = await fetch(`${API_URL}/hoadon`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+                const data = await res.json();
+                alert(data.message);
+                
+                // RESET GIỎ HÀNG
+                gioHang = []; 
+                renderGio();
+                document.getElementById('sdtKH').value = ''; 
+                document.getElementById('tenKH').value = ''; 
+                document.getElementById('diaChiKH').value = '';
+                
+                // TỰ ĐỘNG CẬP NHẬT DATABASE HIỂN THỊ
+                loadBangHoaDon();
+            } catch (err) {
+                alert("Lỗi khi gửi đơn hàng lên Azure!");
+            }
         }
 
         async function loadBangHoaDon() {
-            const res = await fetch(`${API_URL}/hoadon`);
-            const ds = await res.json();
-            const role = document.getElementById('roleSelect').value;
-            const isNhanVien = (role === 'NV01'); 
-            
-            document.getElementById('bangHoaDon').innerHTML = ds.map(hd => {
-                const nhan = new Date(hd.ngay_nhan).toLocaleDateString('vi-VN');
-                return `<tr>
-                    <td>${hd.ma_hd}</td><td>${hd.ten_kh}</td><td>${nhan}</td>
-                    <td style="color:red; font-weight:bold;">${Number(hd.thanh_tien).toLocaleString('vi-VN')} đ</td>
-                    <td>
-                        <select id="status-${hd.ma_hd}" class="status-select" onchange="capNhatTrangThaiHD('${hd.ma_hd}')" 
-                                style="font-weight: bold; border: 2px solid ${isNhanVien ? '#bdc3c7' : '#e67e22'}; padding: 5px; width: 100%" 
-                                ${isNhanVien ? 'disabled' : ''}>
-                            <option value="Chờ xử lý" ${hd.trang_thai === 'Chờ xử lý' ? 'selected' : ''}>Chờ xử lý</option>
-                            <option value="Đang làm đơn" ${hd.trang_thai === 'Đang làm đơn' ? 'selected' : ''}>Đang làm đơn</option>
-                            <option value="Đã xong" ${hd.trang_thai === 'Đã xong' ? 'selected' : ''}>Đã xong</option>
-                            <option value="Đã trả khách" ${hd.trang_thai === 'Đã trả khách' ? 'selected' : ''}>Đã trả khách</option>
-                        </select>
-                    </td>
-                </tr>`;
-            }).join('');
+            try {
+                const res = await fetch(`${API_URL}/hoadon`);
+                const ds = await res.json();
+                const role = document.getElementById('roleSelect').value;
+                const isNhanVien = (role === 'NV01'); 
+                
+                document.getElementById('bangHoaDon').innerHTML = ds.map(hd => {
+                    const nhan = new Date(hd.ngay_nhan).toLocaleDateString('vi-VN');
+                    return `<tr>
+                        <td>${hd.ma_hd}</td><td>${hd.ten_kh}</td><td>${nhan}</td>
+                        <td style="color:red; font-weight:bold;">${Number(hd.thanh_tien).toLocaleString('vi-VN')} đ</td>
+                        <td>
+                            <select id="status-${hd.ma_hd}" class="status-select" onchange="capNhatTrangThaiHD('${hd.ma_hd}')" 
+                                    style="font-weight: bold; border: 2px solid ${isNhanVien ? '#bdc3c7' : '#e67e22'}; padding: 5px; width: 100%" 
+                                    ${isNhanVien ? 'disabled' : ''}>
+                                <option value="Chờ xử lý" ${hd.trang_thai === 'Chờ xử lý' ? 'selected' : ''}>Chờ xử lý</option>
+                                <option value="Đang làm đơn" ${hd.trang_thai === 'Đang làm đơn' ? 'selected' : ''}>Đang làm đơn</option>
+                                <option value="Đã xong" ${hd.trang_thai === 'Đã xong' ? 'selected' : ''}>Đã xong</option>
+                                <option value="Đã trả khách" ${hd.trang_thai === 'Đã trả khách' ? 'selected' : ''}>Đã trả khách</option>
+                            </select>
+                        </td>
+                    </tr>`;
+                }).join('');
+            } catch (err) {
+                document.getElementById('bangHoaDon').innerHTML = '<tr><td colspan="5">Lỗi tải dữ liệu hóa đơn!</td></tr>';
+            }
         }
 
         async function capNhatTrangThaiHD(id) {
             const trangThaiMoi = document.getElementById(`status-${id}`).value;
             await fetch(`${API_URL}/hoadon/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ trang_thai: trangThaiMoi }) });
-            alert("Đã lưu trạng thái: " + trangThaiMoi);
+            alert("Đã lưu trạng thái vào Azure: " + trangThaiMoi);
         }
 
+        // CÁC HÀM QUẢN LÝ DỊCH VỤ & GIẢM GIÁ
         async function loadBangDichVu() { const res = await fetch(`${API_URL}/dichvu`); const ds = await res.json(); document.getElementById('bangDichVu').innerHTML = ds.map(dv => `<tr><td><strong>${dv.ma_dv}</strong></td><td><input type="text" id="ten-${dv.ma_dv}" class="edit-input" value="${dv.ten_dv}"></td><td><input type="number" id="gia-${dv.ma_dv}" class="edit-input" value="${Number(dv.don_gia)}"></td><td><button class="btn-warning" onclick="suaDichVu('${dv.ma_dv}')">Lưu Sửa</button> <button class="btn-danger" onclick="xoaDichVu('${dv.ma_dv}')">Xóa</button></td></tr>`).join(''); }
         async function themDichVuMoi() { const ten = document.getElementById('tenDV').value; const gia = document.getElementById('giaDV').value; if(!ten || !gia) return; await fetch(`${API_URL}/dichvu`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ten_dv: ten, don_gia: gia }) }); document.getElementById('tenDV').value = ''; document.getElementById('giaDV').value = ''; loadBangDichVu(); }
-        async function suaDichVu(id) { const ten = document.getElementById(`ten-${id}`).value; const gia = document.getElementById(`gia-${id}`).value; await fetch(`${API_URL}/dichvu/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ten_dv: ten, don_gia: gia }) }); alert("Đã lưu!"); }
+        async function suaDichVu(id) { const ten = document.getElementById(`ten-${id}`).value; const gia = document.getElementById(`gia-${id}`).value; await fetch(`${API_URL}/dichvu/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ten_dv: ten, don_gia: gia }) }); alert("Đã cập nhật dịch vụ lên Azure!"); }
         async function xoaDichVu(id) { if(!confirm("Xác nhận xóa?")) return; await fetch(`${API_URL}/dichvu/${id}`, { method: 'DELETE' }); loadBangDichVu(); }
 
         async function loadBangGiamGia() { const res = await fetch(`${API_URL}/giamgia_all`); const ds = await res.json(); document.getElementById('bangGiamGia').innerHTML = ds.map(gg => { const bd = new Date(gg.ngay_bat_dau).toLocaleDateString('vi-VN'); const kt = new Date(gg.ngay_ket_thuc).toLocaleDateString('vi-VN'); const isExpired = new Date(gg.ngay_ket_thuc) < new Date(); return `<tr><td><strong>${gg.ma_gg}</strong></td><td>${gg.ten_chuong_trinh} <br> <small><i>${gg.dieu_kien}</i></small></td><td style="color:red; font-weight:bold;">${gg.phan_tram}%</td><td style="${isExpired ? 'color:gray; text-decoration: line-through;' : 'color:green;'}">${bd} - ${kt} ${isExpired ? '(Hết hạn)' : ''}</td><td><button class="btn-danger" onclick="xoaGiamGia('${gg.ma_gg}')">Xóa</button></td></tr>`; }).join(''); }
