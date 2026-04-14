@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const mysql = require('mysql2'); // Đã chuyển sang dùng thư viện mysql2
+const mysql = require('mysql2/promise'); // Đã chuyển sang dùng thư viện mysql2
 
 const app = express();
 app.use(express.json());
