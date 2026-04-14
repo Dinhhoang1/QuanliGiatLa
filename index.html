@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Hệ Thống Giặt Là - Public Version</title>
+    <title>Hệ Thống Giặt Là - Aiven Cloud Edition</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f4f6f9; margin: 0; display: flex; height: 100vh; }
         .sidebar { width: 260px; background: #2c3e50; color: white; padding: 20px; display: flex; flex-direction: column; }
@@ -59,7 +59,7 @@
             </div>
 
             <div class="row-flex">
-                <select id="dvSelect" style="flex: 2;"><option>Đang tải dịch vụ từ Azure...</option></select>
+                <select id="dvSelect" style="flex: 2;"><option>Đang tải dữ liệu từ Aiven Cloud...</option></select>
                 <input type="number" id="soLuong" value="1" min="1" style="flex: 1;">
                 <button onclick="themVaoGio()" style="flex: 1; background: #f39c12;">Thêm Dịch vụ</button>
             </div>
@@ -80,7 +80,7 @@
 
         <div id="tab-thong-ke" class="page-section">
             <h2>📊 Danh Sách Hóa Đơn (Thời gian thực)</h2>
-            <p><i>* Dữ liệu được lấy trực tiếp từ Azure SQL Database.</i></p>
+            <p><i>* Dữ liệu được đồng bộ trực tiếp từ Aiven MySQL Database.</i></p>
             <table>
                 <thead><tr><th>Mã HĐ</th><th>Khách Hàng</th><th>Ngày Lập</th><th>Thành Tiền</th><th>Cập Nhật Trạng Thái</th></tr></thead>
                 <tbody id="bangHoaDon"></tbody>
@@ -122,7 +122,6 @@
     </div>
 
     <script>
-        // KIỂM TRA LINK RENDER: Hãy chắc chắn link này không thừa/thiếu ký tự
         const API_URL = 'https://tiemgiatvandung.onrender.com/api';
         
         let gioHang = [];
@@ -153,7 +152,6 @@
             if(tabId === 'tab-tao-don') initTaoDon();
         }
 
-        // HÀM KHỞI TẠO DỮ LIỆU CÓ XỬ LÝ LỖI
         async function initTaoDon() {
             try {
                 const [resKH, resDV, resGG] = await Promise.all([
@@ -170,14 +168,14 @@
                 if (dsDichVuGoc.length > 0) {
                     dvSelect.innerHTML = dsDichVuGoc.map(dv => `<option value="${dv.ma_dv}">${dv.ten_dv} - ${Number(dv.don_gia).toLocaleString('vi-VN')}đ</option>`).join('');
                 } else {
-                    dvSelect.innerHTML = '<option>Database trống!</option>';
+                    dvSelect.innerHTML = '<option>Aiven Cloud: Database trống!</option>';
                 }
 
                 dsGiamGiaGoc = await resGG.json();
                 capNhatDropdownGiamGia(); 
             } catch (err) {
-                console.error("Lỗi kết nối Render/Azure:", err);
-                document.getElementById('dvSelect').innerHTML = '<option>Lỗi kết nối Server!</option>';
+                console.error("Lỗi kết nối Render/Aiven:", err);
+                document.getElementById('dvSelect').innerHTML = '<option>Lỗi kết nối Server Aiven!</option>';
             }
         }
 
@@ -251,17 +249,15 @@
                 const data = await res.json();
                 alert(data.message);
                 
-                // RESET GIỎ HÀNG
                 gioHang = []; 
                 renderGio();
                 document.getElementById('sdtKH').value = ''; 
                 document.getElementById('tenKH').value = ''; 
                 document.getElementById('diaChiKH').value = '';
                 
-                // TỰ ĐỘNG CẬP NHẬT DATABASE HIỂN THỊ
                 loadBangHoaDon();
             } catch (err) {
-                alert("Lỗi khi gửi đơn hàng lên Azure!");
+                alert("Lỗi khi gửi đơn hàng lên Aiven Cloud!");
             }
         }
 
@@ -290,20 +286,19 @@
                     </tr>`;
                 }).join('');
             } catch (err) {
-                document.getElementById('bangHoaDon').innerHTML = '<tr><td colspan="5">Lỗi tải dữ liệu hóa đơn!</td></tr>';
+                document.getElementById('bangHoaDon').innerHTML = '<tr><td colspan="5">Lỗi tải dữ liệu hóa đơn từ Aiven!</td></tr>';
             }
         }
 
         async function capNhatTrangThaiHD(id) {
             const trangThaiMoi = document.getElementById(`status-${id}`).value;
             await fetch(`${API_URL}/hoadon/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ trang_thai: trangThaiMoi }) });
-            alert("Đã lưu trạng thái vào Azure: " + trangThaiMoi);
+            alert("Đã cập nhật trạng thái lên Aiven: " + trangThaiMoi);
         }
 
-        // CÁC HÀM QUẢN LÝ DỊCH VỤ & GIẢM GIÁ
         async function loadBangDichVu() { const res = await fetch(`${API_URL}/dichvu`); const ds = await res.json(); document.getElementById('bangDichVu').innerHTML = ds.map(dv => `<tr><td><strong>${dv.ma_dv}</strong></td><td><input type="text" id="ten-${dv.ma_dv}" class="edit-input" value="${dv.ten_dv}"></td><td><input type="number" id="gia-${dv.ma_dv}" class="edit-input" value="${Number(dv.don_gia)}"></td><td><button class="btn-warning" onclick="suaDichVu('${dv.ma_dv}')">Lưu Sửa</button> <button class="btn-danger" onclick="xoaDichVu('${dv.ma_dv}')">Xóa</button></td></tr>`).join(''); }
         async function themDichVuMoi() { const ten = document.getElementById('tenDV').value; const gia = document.getElementById('giaDV').value; if(!ten || !gia) return; await fetch(`${API_URL}/dichvu`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ten_dv: ten, don_gia: gia }) }); document.getElementById('tenDV').value = ''; document.getElementById('giaDV').value = ''; loadBangDichVu(); }
-        async function suaDichVu(id) { const ten = document.getElementById(`ten-${id}`).value; const gia = document.getElementById(`gia-${id}`).value; await fetch(`${API_URL}/dichvu/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ten_dv: ten, don_gia: gia }) }); alert("Đã cập nhật dịch vụ lên Azure!"); }
+        async function suaDichVu(id) { const ten = document.getElementById(`ten-${id}`).value; const gia = document.getElementById(`gia-${id}`).value; await fetch(`${API_URL}/dichvu/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ten_dv: ten, don_gia: gia }) }); alert("Đã cập nhật dữ liệu mới lên Aiven Cloud!"); }
         async function xoaDichVu(id) { if(!confirm("Xác nhận xóa?")) return; await fetch(`${API_URL}/dichvu/${id}`, { method: 'DELETE' }); loadBangDichVu(); }
 
         async function loadBangGiamGia() { const res = await fetch(`${API_URL}/giamgia_all`); const ds = await res.json(); document.getElementById('bangGiamGia').innerHTML = ds.map(gg => { const bd = new Date(gg.ngay_bat_dau).toLocaleDateString('vi-VN'); const kt = new Date(gg.ngay_ket_thuc).toLocaleDateString('vi-VN'); const isExpired = new Date(gg.ngay_ket_thuc) < new Date(); return `<tr><td><strong>${gg.ma_gg}</strong></td><td>${gg.ten_chuong_trinh} <br> <small><i>${gg.dieu_kien}</i></small></td><td style="color:red; font-weight:bold;">${gg.phan_tram}%</td><td style="${isExpired ? 'color:gray; text-decoration: line-through;' : 'color:green;'}">${bd} - ${kt} ${isExpired ? '(Hết hạn)' : ''}</td><td><button class="btn-danger" onclick="xoaGiamGia('${gg.ma_gg}')">Xóa</button></td></tr>`; }).join(''); }
