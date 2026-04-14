@@ -10,7 +10,7 @@ app.use(cors());
 // --- CẤU HÌNH DATABASE AIVEN MYSQL ---
 // Tạo 1 pool kết nối dùng chung cho toàn bộ app (Nhanh và mượt hơn)
 const pool = mysql.createPool({
-    host: 'mysql://avnadmin@mysql-tiemgiatla-dinhhoangxz-d576.e.aivencloud.com:13501/defaultdb?ssl-mode=REQUIRED', // Điền host Aiven
+    host: 'mysql-tiemgiatla-dinhhoangxz-d576.e.aivencloud.com', // Điền host Aiven
     user: 'avnadmin',
     password: process.env.AIVEN_PASSWORD, // Điền mật khẩu Aiven
     database: 'QuanLiTiemGiat', 
