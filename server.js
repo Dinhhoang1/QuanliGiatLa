@@ -12,7 +12,7 @@ app.use(cors());
 const pool = mysql.createPool({
     host: 'mysql-tiemgiatla-dinhhoangxz-d576.e.aivencloud.com', // Điền host Aiven
     user: 'avnadmin',
-    password: process.env.AIVEN_PASSWORD, // Điền mật khẩu Aiven
+    password: 'AVNS_O3UPYLpAtHgt3GqXJ0D', // Điền mật khẩu Aiven
     database: 'TiemGiatLa', 
     port: 13501, // Điền Port Aiven của bạn
     ssl: { rejectUnauthorized: false }, // Bắt buộc cho Aiven
