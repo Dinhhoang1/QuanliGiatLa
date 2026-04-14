@@ -28,7 +28,7 @@ const pool = mysql.createPool({
 
     password: 'AVNS_O3UPYLpAtHgt3GqXJ0D', // Điền mật khẩu Aiven
 
-    database: 'QuanLiGiatLa', 
+    database: 'QuanliTiemGat', 
 
     port: 13501, // Điền Port Aiven của bạn
 
