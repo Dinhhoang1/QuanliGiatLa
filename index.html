@@ -294,9 +294,16 @@
         // --- CÁC HÀM QUẢN LÝ BẢNG ---
         async function loadBangHoaDon() {
             try {
-                const res = await fetch(`${API_URL}/hoadon`); const ds = await res.json();
+                const res = await fetch(`${API_URL}/hoadon`); 
+                const ds = await res.json();
+                
+                // Nếu Aiven báo lỗi, in thẳng ra bảng để Thúy biết
+                if(ds.error) {
+                    document.getElementById('bangHoaDon').innerHTML = `<tr><td colspan="8" style="color:red; text-align:center;"><b>Lỗi Database:</b> ${ds.error} <br> 👉 Thúy chạy lại file SQL trên Workbench nhé!</td></tr>`;
+                    return;
+                }
+
                 document.getElementById('bangHoaDon').innerHTML = ds.map(hd => {
-                    let statusColor = hd.trang_thai === 'Đã xong' ? 'bg-green' : (hd.trang_thai === 'Chờ xử lý' ? 'bg-red' : 'bg-orange');
                     return `<tr>
                         <td><strong>${hd.ma_hd}</strong></td>
                         <td style="color:#2980b9; font-weight:bold;">${hd.ma_dd || 'N/A'}</td>
@@ -304,13 +311,22 @@
                         <td>${new Date(hd.ngay_nhan).toLocaleDateString('vi-VN')}</td>
                         <td style="color:#c0392b; font-weight:bold;">${new Date(hd.ngay_hen).toLocaleDateString('vi-VN')}</td>
                         <td style="color:red; font-weight:bold;">${Number(hd.thanh_tien).toLocaleString('vi-VN')} đ</td>
-                        <td><span class="badge ${statusColor}">${hd.trang_thai}</span></td>
+                        <td>
+                            <select id="status-${hd.ma_hd}" onchange="capNhatTrangThaiHD('${hd.ma_hd}')" style="padding: 5px; font-weight: bold; border: 2px solid #ccc; border-radius: 5px;">
+                                <option value="Chờ xử lý" ${hd.trang_thai === 'Chờ xử lý' ? 'selected' : ''}>Chờ xử lý</option>
+                                <option value="Đang làm đơn" ${hd.trang_thai === 'Đang làm đơn' ? 'selected' : ''}>Đang làm đơn</option>
+                                <option value="Đã xong" ${hd.trang_thai === 'Đã xong' ? 'selected' : ''}>Đã xong</option>
+                                <option value="Đã trả khách" ${hd.trang_thai === 'Đã trả khách' ? 'selected' : ''}>Đã trả khách</option>
+                            </select>
+                        </td>
                         <td>
                             <button class="btn-info" onclick="xemChiTietHoaDon('${hd.ma_hd}', '${hd.ten_kh}', '${hd.thanh_tien}', '${hd.ngay_nhan}')">👁️ Chi tiết</button>
                         </td>
                     </tr>`;
                 }).join('');
-            } catch (err) { document.getElementById('bangHoaDon').innerHTML = '<tr><td colspan="8">Đang chờ API...</td></tr>'; }
+            } catch (err) { 
+                document.getElementById('bangHoaDon').innerHTML = '<tr><td colspan="8" style="color:red; text-align:center;">Mất kết nối với Server (Render đang ngủ hoặc lỗi)</td></tr>'; 
+            }
         }
 
         // ==========================================
