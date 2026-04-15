@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Hệ Thống Giặt Là Pro - Đầy đủ tính năng</title>
+    <title>GIẶT LÀ PRO - Quản lý 9 bảng</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f4f6f9; margin: 0; display: flex; height: 100vh; }
         .sidebar { width: 260px; background: #2c3e50; color: white; padding: 20px; display: flex; flex-direction: column; overflow-y: auto;}
@@ -21,6 +21,7 @@
         .btn-warning { background: #f39c12; width: auto; padding: 8px 15px; }
         .btn-success { background: #2ecc71; }
         .btn-info { background: #8e44ad; color: white; width: auto; padding: 8px 15px; margin-right: 5px;}
+        .btn-history { background: #9b59b6; padding: 8px 15px; font-size: 13px; color: white; border: none; border-radius: 4px; cursor: pointer;}
         table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px;}
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
         th { background: #f8f9fa; position: sticky; top: 0;}
@@ -32,7 +33,7 @@
         
         /* Modal Styles */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-        .modal-content { background-color: #fff; margin: 5% auto; padding: 25px; border-radius: 10px; width: 60%; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .modal-content { background-color: #fff; margin: 5% auto; padding: 25px; border-radius: 10px; width: 70%; max-height: 80vh; overflow-y: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
         .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
         .close-btn:hover { color: black; }
     </style>
@@ -86,7 +87,7 @@
 
             <div class="row-flex">
                 <select id="dvSelect" style="flex: 2;"><option>Đang tải dịch vụ...</option></select>
-                <input type="number" id="soLuong" value="1" min="1" style="flex: 1;">
+                <input type="number" id="soLuong" value="1" min="1" style="flex: 1;" placeholder="Khối lượng (kg)...">
                 <button onclick="themVaoGio()" style="flex: 1; background: #f39c12;">Thêm Dịch vụ</button>
             </div>
             
@@ -127,9 +128,9 @@
         </div>
 
         <div id="tab-khach-hang" class="page-section">
-            <h2>👥 Danh Sách Khách Hàng</h2>
+            <h2>👥 Quản Lý Khách Hàng (Tích hợp Lịch Sử)</h2>
             <table>
-                <thead><tr><th>Mã KH</th><th>Tên Khách Hàng</th><th>SĐT</th><th>Địa Chỉ</th><th>Loại Khách</th></tr></thead>
+                <thead><tr><th>Mã KH</th><th>Tên Khách Hàng</th><th>SĐT</th><th>Địa Chỉ</th><th>Loại Khách</th><th>Hành Động</th></tr></thead>
                 <tbody id="bangKhachHang"></tbody>
             </table>
         </div>
@@ -161,7 +162,7 @@
 
     <div id="chiTietModal" class="modal">
         <div class="modal-content">
-            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <span class="close-btn" onclick="closeModal('chiTietModal')">&times;</span>
             <h2 id="modalTitle">Chi Tiết Hóa Đơn</h2>
             <div style="background: #ecf0f1; padding: 15px; border-radius: 5px; margin-bottom: 15px;" id="modalThongTinChung"></div>
             <h3>Danh sách dịch vụ đã sử dụng:</h3>
@@ -172,12 +173,25 @@
         </div>
     </div>
 
+    <div id="modalLichSu" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('modalLichSu')">&times;</span>
+            <h2>Lịch Sử Đến Giặt - Khách: <span id="tenKhachLichSu" style="color: #2980b9;"></span></h2>
+            <table>
+                <thead><tr><th>Ngày Nhận</th><th>Ngày Hẹn</th><th>Mã Đơn</th><th>Mã Hóa Đơn</th><th>Tiền Cước</th><th>Trạng Thái</th></tr></thead>
+                <tbody id="bodyLichSu"></tbody>
+            </table>
+            <div style="text-align: right; margin-top: 15px;">
+                <button onclick="closeModal('modalLichSu')" class="btn-danger">Đóng Lịch Sử</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_URL = 'https://tiemgiatvandung.onrender.com/api';
         
         let gioHang = []; let dsDichVuGoc = []; let dsKhachHang = []; let dsGiamGiaGoc = []; let dsLoaiKhach = []; let tongChuaGiamHienTai = 0;
 
-        // Tự động set ngày hẹn trả mặc định là ngày mai
         const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
         document.getElementById('ngayHen').value = tomorrow.toISOString().split('T')[0];
 
@@ -239,6 +253,7 @@
             const ma_dv = document.getElementById('dvSelect').value; const dv = dsDichVuGoc.find(d => d.ma_dv === ma_dv);
             if(!dv) return;
             const sl = parseInt(document.getElementById('soLuong').value);
+            if(isNaN(sl) || sl < 1) return;
             const item = gioHang.find(i => i.ma_dv === ma_dv);
             if(item) item.so_luong += sl; else gioHang.push({ ma_dv: dv.ma_dv, ten_dv: dv.ten_dv, don_gia: Number(dv.don_gia), so_luong: sl });
             renderGio();
@@ -279,7 +294,7 @@
                 sdt: document.getElementById('sdtKH').value, ten_kh: document.getElementById('tenKH').value, 
                 dia_chi: document.getElementById('diaChiKH').value, ma_loai: document.getElementById('loaiKH').value,
                 ma_nv: document.getElementById('nvSelect').value,
-                ngay_hen: document.getElementById('ngayHen').value, // Lấy ngày hẹn từ giao diện
+                ngay_hen: document.getElementById('ngayHen').value,
                 ma_gg: document.getElementById('ggSelect').value === "0" ? null : document.getElementById('ggSelect').value, 
                 thanh_tien: window.thanhTienCuoiCung, ds_dich_vu: gioHang 
             };
@@ -291,8 +306,7 @@
             } catch (err) { alert("Lỗi gửi đơn!"); }
         }
 
-        // --- CÁC HÀM QUẢN LÝ BẢNG ---
-        // Đã sửa hàm lấy dữ liệu để dựa vào Đơn Đặt
+        // --- QUẢN LÝ HÓA ĐƠN ---
         async function loadBangHoaDon() {
             try {
                 const res = await fetch(`${API_URL}/hoadon`); 
@@ -335,9 +349,6 @@
             alert("Đã cập nhật trạng thái lên Aiven: " + trangThaiMoi);
         }
 
-        // ==========================================
-        // MODAL XEM CHI TIẾT HÓA ĐƠN
-        // ==========================================
         async function xemChiTietHoaDon(ma_hd, ten_kh, tong_tien, ngay) {
             document.getElementById('chiTietModal').style.display = 'block';
             document.getElementById('modalTitle').innerText = 'Chi Tiết Hóa Đơn: ' + ma_hd;
@@ -364,12 +375,14 @@
             }
         }
 
-        function closeModal() { document.getElementById('chiTietModal').style.display = 'none'; }
-        window.onclick = function(event) { if (event.target == document.getElementById('chiTietModal')) closeModal(); }
+        // Đóng các Modal
+        function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
+        window.onclick = function(event) { 
+            if (event.target == document.getElementById('chiTietModal')) closeModal('chiTietModal'); 
+            if (event.target == document.getElementById('modalLichSu')) closeModal('modalLichSu'); 
+        }
 
-        // ==========================================
-        // QUẢN LÝ LOẠI KHÁCH HÀNG
-        // ==========================================
+        // --- QUẢN LÝ LOẠI KHÁCH HÀNG ---
         async function loadBangLoaiKhach() {
             try {
                 const res = await fetch(`${API_URL}/loaikhach`); const ds = await res.json();
@@ -384,12 +397,49 @@
                 await fetch(`${API_URL}/loaikhach`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ma_loai: ma, ten_loai: ten, mo_ta: mota }) });
                 alert("Đã thêm Loại Khách Hàng mới!");
                 document.getElementById('maLoaiKh').value=''; document.getElementById('tenLoaiKh').value=''; document.getElementById('moTaLoaiKh').value='';
-                loadBangLoaiKhach(); initTaoDon(); // Tải lại để cập nhật Dropdown
+                loadBangLoaiKhach(); initTaoDon(); 
             } catch(e) { alert("Lỗi khi thêm!"); }
         }
 
-        // CÁC HÀM CŨ GIỮ NGUYÊN (Khách hàng, Nhân viên, Dịch vụ, Giảm giá)
-        async function loadBangKhachHang() { try { const res = await fetch(`${API_URL}/khachhang`); const ds = await res.json(); document.getElementById('bangKhachHang').innerHTML = ds.map(kh => `<tr><td>${kh.ma_kh}</td><td><strong>${kh.ten_kh}</strong></td><td>${kh.sdt}</td><td>${kh.dia_chi}</td><td>${kh.ma_loai}</td></tr>`).join(''); } catch (err) {} }
+        // --- QUẢN LÝ KHÁCH HÀNG (CÓ LỊCH SỬ) ---
+        async function loadBangKhachHang() { 
+            try { 
+                const res = await fetch(`${API_URL}/khachhang`); 
+                const ds = await res.json(); 
+                document.getElementById('bangKhachHang').innerHTML = ds.map(kh => `<tr>
+                    <td>${kh.ma_kh}</td><td><strong>${kh.ten_kh}</strong></td><td>${kh.sdt}</td><td>${kh.dia_chi}</td><td>${kh.ma_loai}</td>
+                    <td><button class="btn-history" onclick="xemLichSuKhach('${kh.ma_kh}', '${kh.ten_kh}')">📜 Lịch sử</button></td>
+                </tr>`).join(''); 
+            } catch (err) {} 
+        }
+
+        async function xemLichSuKhach(ma_kh, ten_kh) {
+            document.getElementById('tenKhachLichSu').innerText = ten_kh;
+            document.getElementById('modalLichSu').style.display = 'block';
+            document.getElementById('bodyLichSu').innerHTML = '<tr><td colspan="6" style="text-align:center;">Đang tải dữ liệu...</td></tr>';
+            
+            try {
+                const res = await fetch(`${API_URL}/khachhang/${ma_kh}/lichsu`);
+                const data = await res.json();
+                
+                if (data.length === 0) {
+                    document.getElementById('bodyLichSu').innerHTML = '<tr><td colspan="6" style="text-align:center;">Khách hàng này chưa có giao dịch nào.</td></tr>';
+                    return;
+                }
+
+                document.getElementById('bodyLichSu').innerHTML = data.map(log => `<tr>
+                    <td>${new Date(log.ngay_nhan).toLocaleDateString('vi-VN')}</td>
+                    <td style="color:#c0392b; font-weight:bold;">${new Date(log.ngay_hen).toLocaleDateString('vi-VN')}</td>
+                    <td>${log.ma_dd}</td>
+                    <td>${log.ma_hd || 'N/A'}</td>
+                    <td style="color:red; font-weight:bold;">${Number(log.thanh_tien || 0).toLocaleString('vi-VN')} đ</td>
+                    <td><b>${log.trang_thai}</b></td>
+                </tr>`).join('');
+            } catch(e) {
+                document.getElementById('bodyLichSu').innerHTML = '<tr><td colspan="6" style="color:red; text-align:center;">Lỗi tải dữ liệu từ Server!</td></tr>';
+            }
+        }
+
         async function loadBangNhanVien() { try { const res = await fetch(`${API_URL}/nhanvien`); const ds = await res.json(); document.getElementById('bangNhanVien').innerHTML = ds.map(nv => `<tr><td>${nv.ma_nv}</td><td><strong>${nv.ten_nv}</strong></td><td>${nv.sdt}</td><td><span class="badge ${nv.chuc_vu === 'Quản lý' ? 'bg-red' : 'bg-green'}">${nv.chuc_vu}</span></td><td>${Number(nv.luong).toLocaleString('vi-VN')} đ</td></tr>`).join(''); } catch (err) {} }
         async function loadBangDichVu() { try { const res = await fetch(`${API_URL}/dichvu`); const ds = await res.json(); document.getElementById('bangDichVu').innerHTML = ds.map(dv => `<tr><td><strong>${dv.ma_dv}</strong></td><td>${dv.ten_dv}</td><td>${Number(dv.don_gia).toLocaleString('vi-VN')}</td></tr>`).join(''); } catch(err) {} }
         async function loadBangGiamGia() { try { const res = await fetch(`${API_URL}/giamgia_all`); const ds = await res.json(); document.getElementById('bangGiamGia').innerHTML = ds.map(gg => `<tr><td><strong>${gg.ma_gg}</strong></td><td>${gg.ten_chuong_trinh}</td><td>${gg.phan_tram}%</td><td>${new Date(gg.ngay_bat_dau).toLocaleDateString('vi-VN')} - ${new Date(gg.ngay_ket_thuc).toLocaleDateString('vi-VN')}</td></tr>`).join(''); } catch(err){} }
