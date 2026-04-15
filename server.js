@@ -1,20 +1,21 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const mysql = require('mysql2/promise');
+const mysql = require('mysql2/promise'); // Đã chuyển sang dùng thư viện mysql2
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
 // --- CẤU HÌNH DATABASE AIVEN MYSQL ---
+// Tạo 1 pool kết nối dùng chung cho toàn bộ app (Nhanh và mượt hơn)
 const pool = mysql.createPool({
-    host: 'mysql-tiemgiatla-dinhhoangxz-d576.e.aivencloud.com',
+    host: 'mysql-tiemgiatla-dinhhoangxz-d576.e.aivencloud.com', // Điền host Aiven
     user: 'avnadmin',
-    password: process.env.AIVEN_PASSWORD || 'AVNS_O3UPYLpAtHgt3GqXJ0D',
+    password: 'AVNS_O3UPYLpAtHgt3GqXJ0D', // Điền mật khẩu Aiven
     database: 'QuanliTiemGiat', 
-    port: 13501, 
-    ssl: { rejectUnauthorized: false }, 
+    port: 13501, // Điền Port Aiven của bạn
+    ssl: { rejectUnauthorized: false }, // Bắt buộc cho Aiven
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
@@ -23,23 +24,8 @@ const pool = mysql.createPool({
 const generateID = (prefix) => prefix + Math.floor(1000 + Math.random() * 9000);
 
 // ==========================================
-// 1. API: LOẠI KHÁCH HÀNG & KHÁCH HÀNG
+// 1. API: KHÁCH HÀNG & GIẢM GIÁ
 // ==========================================
-app.get('/api/loaikhach', async (req, res) => {
-    try {
-        const [rows] = await pool.query("SELECT * FROM loai_khach_hang");
-        res.json(rows);
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.post('/api/loaikhach', async (req, res) => {
-    const { ma_loai, ten_loai, mo_ta } = req.body;
-    try {
-        await pool.query("INSERT INTO loai_khach_hang (ma_loai, ten_loai, mo_ta) VALUES (?, ?, ?)", [ma_loai, ten_loai, mo_ta]);
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
 app.get('/api/khachhang', async (req, res) => {
     try {
         const [rows] = await pool.query("SELECT * FROM khach_hang");
@@ -47,64 +33,16 @@ app.get('/api/khachhang', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ==========================================
-// 2. API: NHÂN VIÊN
-// ==========================================
-app.get('/api/nhanvien', async (req, res) => {
-    try {
-        const [rows] = await pool.query("SELECT * FROM nhan_vien");
-        res.json(rows);
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.post('/api/nhanvien', async (req, res) => {
-    const { ten_nv, sdt, chuc_vu, luong } = req.body;
-    try {
-        const ma_nv = generateID('NV');
-        await pool.query("INSERT INTO nhan_vien (ma_nv, ten_nv, sdt, chuc_vu, luong) VALUES (?, ?, ?, ?, ?)", [ma_nv, ten_nv, sdt, chuc_vu, luong]);
-        res.json({ success: true, message: "Đã thêm nhân viên mới!" });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// ==========================================
-// 3. API: DỊCH VỤ & GIẢM GIÁ
-// ==========================================
-app.get('/api/dichvu', async (req, res) => {
-    try {
-        const [rows] = await pool.query("SELECT * FROM dich_vu");
-        res.json(rows);
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.post('/api/dichvu', async (req, res) => {
-    const { ten_dv, don_gia } = req.body;
-    try {
-        await pool.query("INSERT INTO dich_vu (ma_dv, ten_dv, don_gia) VALUES (?, ?, ?)", [generateID('DV'), ten_dv, don_gia]);
-        res.json({ success: true, message: "Đã thêm dịch vụ!" });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.put('/api/dichvu/:id', async (req, res) => {
-    try {
-        await pool.query("UPDATE dich_vu SET ten_dv = ?, don_gia = ? WHERE ma_dv = ?", [req.body.ten_dv, req.body.don_gia, req.params.id]);
-        res.json({ success: true, message: "Đã lưu thay đổi!" });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.delete('/api/dichvu/:id', async (req, res) => {
-    try {
-        await pool.query("DELETE FROM dich_vu WHERE ma_dv = ?", [req.params.id]);
-        res.json({ success: true, message: "Đã xóa dịch vụ!" });
-    } catch (err) { res.status(500).json({ error: "Lỗi: Đang vướng khóa ngoại." }); }
-});
-
+// Lấy mã giảm giá CÒN HẠN để nhân viên lập đơn
 app.get('/api/giamgia', async (req, res) => {
     try {
+        // MySQL dùng CURDATE() thay vì CAST(GETDATE() AS DATE)
         const [rows] = await pool.query("SELECT * FROM giam_gia WHERE ngay_ket_thuc >= CURDATE()");
         res.json(rows);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Lấy TẤT CẢ mã giảm giá cho Quản lý xem
 app.get('/api/giamgia_all', async (req, res) => {
     try {
         const [rows] = await pool.query("SELECT * FROM giam_gia");
@@ -112,12 +50,15 @@ app.get('/api/giamgia_all', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Quản lý Thêm mã giảm giá mới
 app.post('/api/giamgia', async (req, res) => {
     const { ten_chuong_trinh, phan_tram, dieu_kien, ngay_bat_dau, ngay_ket_thuc } = req.body;
     try {
+        const ma_gg = generateID('GG');
+        // Truyền tham số bằng dấu ? để chống hack SQL Injection
         await pool.query(
             "INSERT INTO giam_gia (ma_gg, ten_chuong_trinh, phan_tram, dieu_kien, ngay_bat_dau, ngay_ket_thuc) VALUES (?, ?, ?, ?, ?, ?)",
-            [generateID('GG'), ten_chuong_trinh, phan_tram, dieu_kien, ngay_bat_dau, ngay_ket_thuc]
+            [ma_gg, ten_chuong_trinh, phan_tram, dieu_kien, ngay_bat_dau, ngay_ket_thuc]
         );
         res.json({ success: true, message: "Đã thêm Mã Giảm Giá mới!" });
     } catch (err) { res.status(500).json({ error: err.message }); }
@@ -131,7 +72,47 @@ app.delete('/api/giamgia/:id', async (req, res) => {
 });
 
 // ==========================================
-// 4. API: ĐƠN ĐẶT & HÓA ĐƠN (Đã sửa đồng bộ DB mới)
+// 2. API: DỊCH VỤ 
+// ==========================================
+app.get('/api/dichvu', async (req, res) => {
+    try {
+        const [rows] = await pool.query("SELECT * FROM dich_vu");
+        res.json(rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/dichvu', async (req, res) => {
+    const { ten_dv, don_gia } = req.body;
+    try {
+        const ma_dv = generateID('DV');
+        await pool.query(
+            "INSERT INTO dich_vu (ma_dv, ten_dv, don_gia) VALUES (?, ?, ?)", 
+            [ma_dv, ten_dv, don_gia]
+        );
+        res.json({ success: true, message: "Đã thêm dịch vụ!" });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/dichvu/:id', async (req, res) => {
+    const { ten_dv, don_gia } = req.body;
+    try {
+        await pool.query(
+            "UPDATE dich_vu SET ten_dv = ?, don_gia = ? WHERE ma_dv = ?", 
+            [ten_dv, don_gia, req.params.id]
+        );
+        res.json({ success: true, message: "Đã lưu thay đổi!" });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/dichvu/:id', async (req, res) => {
+    try {
+        await pool.query("DELETE FROM dich_vu WHERE ma_dv = ?", [req.params.id]);
+        res.json({ success: true, message: "Đã xóa dịch vụ!" });
+    } catch (err) { res.status(500).json({ error: "Lỗi: Đang vướng khóa ngoại." }); }
+});
+
+// ==========================================
+// 3. API: HÓA ĐƠN & ĐƠN ĐẶT
 // ==========================================
 app.post('/api/hoadon', async (req, res) => {
     const { ten_kh, sdt, dia_chi, ma_loai, ma_nv, ngay_hen, ma_gg, ds_dich_vu, thanh_tien } = req.body;
@@ -176,26 +157,34 @@ app.post('/api/hoadon', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// API Lấy danh sách Hóa Đơn (Đã sửa lệnh JOIN bảng)
+// API Lấy danh sách (Lấy từ bảng don_dat làm gốc, nối sang hoa_don để lấy tổng tiền)
 app.get('/api/hoadon', async (req, res) => {
     try {
         const [rows] = await pool.query(`
             SELECT 
-                h.ma_hd, d.ma_dd, k.ten_kh, h.ngay_nhan, h.ngay_hen, h.thanh_tien, h.trang_thai 
-            FROM hoa_don h
-            LEFT JOIN don_dat d ON h.ma_dd = d.ma_dd
+                d.ma_dd, 
+                h.ma_hd, 
+                k.ten_kh, 
+                d.ngay_nhan, 
+                d.ngay_hen, 
+                h.thanh_tien, 
+                d.trang_thai 
+            FROM don_dat d
+            LEFT JOIN hoa_don h ON d.ma_dd = h.ma_dd
             LEFT JOIN khach_hang k ON d.ma_kh = k.ma_kh
-            ORDER BY h.ngay_nhan DESC
+            ORDER BY d.ngay_nhan DESC
         `);
         res.json(rows);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// API Cập nhật trạng thái (Cập nhật trực tiếp vào bảng don_dat)
 app.put('/api/hoadon/:id', async (req, res) => {
     const { trang_thai } = req.body;
     try {
-        await pool.query("UPDATE hoa_don SET trang_thai = ? WHERE ma_hd = ?", [trang_thai, req.params.id]);
-        res.json({ success: true, message: "Đã cập nhật trạng thái!" });
+        // req.params.id lúc này sẽ là ma_dd được gửi từ frontend
+        await pool.query("UPDATE don_dat SET trang_thai = ? WHERE ma_dd = ?", [trang_thai, req.params.id]);
+        res.json({ success: true, message: "Đã cập nhật trạng thái đơn đặt!" });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -212,13 +201,59 @@ app.get('/api/hoadon/:id/chitiet', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ==========================================
+// API: NHÂN VIÊN
+// ==========================================
+// Lấy danh sách nhân viên
+app.get('/api/nhanvien', async (req, res) => {
+    try {
+        const [rows] = await pool.query("SELECT * FROM nhan_vien");
+        res.json(rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Quản lý thêm nhân viên mới
+app.post('/api/nhanvien', async (req, res) => {
+    const { ten_nv, sdt, chuc_vu, luong } = req.body;
+    try {
+        const ma_nv = 'NV' + Math.floor(1000 + Math.random() * 9000);
+        await pool.query(
+            "INSERT INTO nhan_vien (ma_nv, ten_nv, sdt, chuc_vu, luong) VALUES (?, ?, ?, ?, ?)",
+            [ma_nv, ten_nv, sdt, chuc_vu, luong]
+        );
+        res.json({ success: true, message: "Đã thêm nhân viên mới!" });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 // ==========================================
-// 5. CHẠY SERVER
+// 2. API: QUẢN LÝ LOẠI KHÁCH HÀNG
+// ==========================================
+app.get('/api/loaikhach', async (req, res) => {
+    try {
+        const [rows] = await pool.query("SELECT * FROM loai_khach_hang");
+        res.json(rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/loaikhach', async (req, res) => {
+    const { ma_loai, ten_loai, mo_ta } = req.body;
+    try {
+        await pool.query(
+            "INSERT INTO loai_khach_hang (ma_loai, ten_loai, mo_ta) VALUES (?, ?, ?)",
+            [ma_loai, ten_loai, mo_ta]
+        );
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+
+// ==========================================
+// 4. CHẠY SERVER
 // ==========================================
 const PORT = process.env.PORT || 10000;
+// Dòng này cực kỳ quan trọng: Nó bảo Server nếu ai vào trang chủ thì đưa file index.html cho họ
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.listen(PORT, () => console.log(`🚀 Server chạy tại port ${PORT}`));
+app.listen(PORT, () => console.log(`Server chạy tại port ${PORT}`));
