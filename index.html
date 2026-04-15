@@ -134,8 +134,14 @@
 
     <div id="tab-dich-vu" class="card">
         <h2>⚙️ Quản Lý Dịch Vụ</h2>
+        <div style="background: #e8f4f8; padding: 15px; border-radius: 5px; display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+            <input type="text" id="tenDVMoi" placeholder="Tên dịch vụ (VD: Giặt giày)" style="flex: 2; border: 2px solid #3498db;">
+            <input type="number" id="giaDVMoi" placeholder="Đơn giá (VNĐ)" min="1000" style="flex: 1; border: 2px solid #3498db;">
+            <button onclick="themDichVuMoi()" style="background: #2ecc71;">+ Thêm Dịch Vụ Mới</button>
+        </div>
+
         <table id="tableDV">
-            <thead><tr><th style="width:15%">Mã DV</th><th style="width:35%">Tên Dịch Vụ</th><th style="width:25%">Đơn Giá</th></tr></thead>
+            <thead><tr><th style="width:15%">Mã DV</th><th style="width:35%">Tên Dịch Vụ</th><th style="width:25%">Đơn Giá</th><th>Hành Động</th></tr></thead>
             <tbody></tbody>
         </table>
     </div>
@@ -172,7 +178,6 @@
 
     function changeRole() {
         const role = document.getElementById('roleSelect').value;
-        // ĐÃ SỬA: Chỉ hiện menu-item, không hiện card
         document.querySelectorAll('.menu-item.manager-only').forEach(el => el.style.display = role === 'NV02' ? 'block' : 'none');
         showTab('tab-tao-don');
     }
@@ -359,7 +364,63 @@
 
     async function loadNhanVien() { const res = await fetch(API+'/nhanvien'); const ds = await res.json(); document.querySelector('#tableNV tbody').innerHTML = ds.map(n => `<tr><td>${n.ma_nv}</td><td>${n.ten_nv}</td><td>${n.sdt}</td><td>${n.chuc_vu}</td><td>${Number(n.luong).toLocaleString()}đ</td></tr>`).join(''); }
     async function loadLoaiKhach() { const res = await fetch(API+'/loaikhach'); const ds = await res.json(); document.querySelector('#tableLK tbody').innerHTML = ds.map(l => `<tr><td>${l.ma_loai}</td><td>${l.ten_loai}</td><td>${l.mo_ta}</td></tr>`).join(''); }
-    async function loadDichVu() { const res = await fetch(API+'/dichvu'); const ds = await res.json(); document.querySelector('#tableDV tbody').innerHTML = ds.map(d => `<tr><td>${d.ma_dv}</td><td>${d.ten_dv}</td><td>${Number(d.don_gia).toLocaleString()}đ</td></tr>`).join(''); }
+    
+    // --- CÁC HÀM XỬ LÝ DỊCH VỤ ĐƯỢC CHÈN THÊM VÀO ĐÂY ---
+    async function loadDichVu() { 
+        const res = await fetch(API+'/dichvu'); 
+        const ds = await res.json(); 
+        // Thêm nút Xóa vào cột cuối
+        document.querySelector('#tableDV tbody').innerHTML = ds.map(d => `<tr>
+            <td>${d.ma_dv}</td>
+            <td>${d.ten_dv}</td>
+            <td style="font-weight:bold; color:#2980b9;">${Number(d.don_gia).toLocaleString()}đ</td>
+            <td><button onclick="xoaDichVu('${d.ma_dv}')" style="background:#e74c3c; padding:5px 10px; border-radius:3px;">Xóa</button></td>
+        </tr>`).join(''); 
+    }
+
+    async function themDichVuMoi() {
+        const ten_dv = document.getElementById('tenDVMoi').value;
+        const don_gia = document.getElementById('giaDVMoi').value;
+        
+        if (!ten_dv || !don_gia) return alert("Vui lòng nhập đủ Tên dịch vụ và Đơn giá!");
+
+        try {
+            const res = await fetch(API+'/dichvu', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ ten_dv, don_gia }) 
+            });
+            const data = await res.json();
+            
+            if (data.error) throw new Error(data.error);
+            
+            alert(data.message || "Đã thêm dịch vụ thành công!");
+            document.getElementById('tenDVMoi').value = '';
+            document.getElementById('giaDVMoi').value = '';
+            
+            loadDichVu(); // Cập nhật lại bảng Quản lý Dịch vụ
+            init(); // Nạp lại danh sách Dịch vụ ở Dropdown tab Lập Đơn
+        } catch (err) {
+            alert("Lỗi: " + err.message);
+        }
+    }
+
+    async function xoaDichVu(id) {
+        if (!confirm("Bạn có chắc chắn muốn xóa dịch vụ này?")) return;
+        
+        try {
+            const res = await fetch(API+'/dichvu/' + id, { method: 'DELETE' });
+            const data = await res.json();
+            
+            if (data.error) throw new Error(data.error);
+            
+            alert(data.message || "Đã xóa!");
+            loadDichVu();
+            init();
+        } catch (err) {
+            alert(err.message);
+        }
+    }
 
     window.onload = init;
 </script>
