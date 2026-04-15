@@ -366,6 +366,41 @@ app.post('/api/nhanvien', async (req, res) => {
         res.json({ success: true, message: "Đã thêm nhân viên mới!" });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
+// ==========================================
+// 1. API: XEM CHI TIẾT HÓA ĐƠN
+// ==========================================
+app.get('/api/hoadon/:id/chitiet', async (req, res) => {
+    try {
+        const [rows] = await pool.query(`
+            SELECT c.ma_dv, d.ten_dv, c.so_luong, c.don_gia 
+            FROM chi_tiet_hoa_don c 
+            JOIN dich_vu d ON c.ma_dv = d.ma_dv 
+            WHERE c.ma_hd = ?
+        `, [req.params.id]);
+        res.json(rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ==========================================
+// 2. API: QUẢN LÝ LOẠI KHÁCH HÀNG
+// ==========================================
+app.get('/api/loaikhach', async (req, res) => {
+    try {
+        const [rows] = await pool.query("SELECT * FROM loai_khach_hang");
+        res.json(rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/loaikhach', async (req, res) => {
+    const { ma_loai, ten_loai, mo_ta } = req.body;
+    try {
+        await pool.query(
+            "INSERT INTO loai_khach_hang (ma_loai, ten_loai, mo_ta) VALUES (?, ?, ?)",
+            [ma_loai, ten_loai, mo_ta]
+        );
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 
 // ==========================================
