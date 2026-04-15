@@ -245,7 +245,19 @@ app.post('/api/loaikhach', async (req, res) => {
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
-
+// API Lấy lịch sử giao dịch (log) của 1 khách hàng cụ thể
+app.get('/api/khachhang/:id/lichsu', async (req, res) => {
+    try {
+        const [rows] = await pool.query(`
+            SELECT d.ma_dd, h.ma_hd, d.ngay_nhan, d.ngay_hen, h.thanh_tien, d.trang_thai 
+            FROM don_dat d
+            LEFT JOIN hoa_don h ON d.ma_dd = h.ma_dd
+            WHERE d.ma_kh = ?
+            ORDER BY d.ngay_nhan DESC
+        `, [req.params.id]);
+        res.json(rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 // ==========================================
 // 4. CHẠY SERVER
