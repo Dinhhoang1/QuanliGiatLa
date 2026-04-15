@@ -13,7 +13,7 @@
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: none; }
         .card.active { display: block; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 12px; border: 1px solid #eee; text-align: left; }
+        th, td { padding: 12px; border: 1px solid #eee; text-align: left; vertical-align: middle; }
         th { background: #f8f9fa; }
         input, select, button { padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; }
         button { background: #3498db; color: white; border: none; cursor: pointer; font-weight: bold;}
@@ -84,7 +84,18 @@
     <div id="tab-danh-sach" class="card">
         <h2>Danh Sách Đơn Đặt & Hóa Đơn</h2>
         <table id="tableHD">
-            <thead><tr><th>Đơn Đặt</th><th>Hóa Đơn</th><th>Khách</th><th>Hẹn Trả</th><th>Tiền</th><th>Trạng Thái</th><th>Chi Tiết</th></tr></thead>
+            <thead>
+                <tr>
+                    <th>Đơn Đặt</th>
+                    <th>Hóa Đơn</th>
+                    <th>Khách</th>
+                    <th>Hẹn Trả</th>
+                    <th>Dịch Vụ Đã Đặt</th>
+                    <th>Tiền</th>
+                    <th>Trạng Thái</th>
+                    <th>Chi Tiết</th>
+                </tr>
+            </thead>
             <tbody></tbody>
         </table>
     </div>
@@ -97,7 +108,7 @@
         </table>
     </div>
 
-    <div id="tab-giam-gia" class="card">
+    <div id="tab-giam-gia" class="card manager-only">
         <h2>🎁 Quản Lý Mã Giảm Giá</h2>
         <div style="background: #fdf2e9; padding: 15px; border-radius: 5px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
             <input type="text" id="tenGG" placeholder="Tên CT (VD: Lễ 30/4)" style="flex: 2;">
@@ -116,7 +127,7 @@
         </table>
     </div>
 
-    <div id="tab-loai-khach" class="card">
+    <div id="tab-loai-khach" class="card manager-only">
         <h2>🏷️ Quản Lý Loại Khách Hàng</h2>
         <table id="tableLK">
             <thead><tr><th>Mã Loại</th><th>Tên Loại Khách Hàng</th><th>Mô Tả</th></tr></thead>
@@ -124,7 +135,7 @@
         </table>
     </div>
 
-    <div id="tab-nhan-vien" class="card">
+    <div id="tab-nhan-vien" class="card manager-only">
         <h2>Danh Sách Nhân Viên</h2>
         <table id="tableNV">
             <thead><tr><th>Mã NV</th><th>Họ Tên</th><th>SĐT</th><th>Chức Vụ</th><th>Lương</th></tr></thead>
@@ -132,7 +143,7 @@
         </table>
     </div>
 
-    <div id="tab-dich-vu" class="card">
+    <div id="tab-dich-vu" class="card manager-only">
         <h2>⚙️ Quản Lý Dịch Vụ</h2>
         <div style="background: #e8f4f8; padding: 15px; border-radius: 5px; display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
             <input type="text" id="tenDVMoi" placeholder="Tên dịch vụ (VD: Giặt giày)" style="flex: 2; border: 2px solid #3498db;">
@@ -158,10 +169,20 @@
 </div>
 
 <div id="modalLichSu" class="modal">
-    <div class="modal-content">
+    <div class="modal-content" style="width: 80%;">
         <h3>Lịch Sử Đến Giặt - Khách: <span id="tenKhachLichSu" style="color: #2980b9;"></span></h3>
         <table id="tableLichSu">
-            <thead><tr><th>Ngày Nhận</th><th>Ngày Hẹn</th><th>Mã Đơn</th><th>Mã Hóa Đơn</th><th>Tiền Cước</th><th>Trạng Thái</th></tr></thead>
+            <thead>
+                <tr>
+                    <th>Ngày Nhận</th>
+                    <th>Ngày Hẹn</th>
+                    <th>Mã Đơn</th>
+                    <th>Mã Hóa Đơn</th>
+                    <th>Dịch Vụ Đã Đặt</th>
+                    <th>Tiền Cước</th>
+                    <th>Trạng Thái</th>
+                </tr>
+            </thead>
             <tbody id="bodyLichSu"></tbody>
         </table>
         <button onclick="document.getElementById('modalLichSu').style.display='none'" style="margin-top: 15px; background: #e74c3c;">Đóng Lịch Sử</button>
@@ -170,14 +191,22 @@
 
 <script>
     const API = 'https://tiemgiatvandung.onrender.com/api';
-    let gioHang = []; let dsDichVu = []; let dsKhach = []; let dsGiamGia = []; let dsLoaiKhach = []; let tongChuaGiam = 0;
+    let gioHang = []; 
+    let dsDichVu = []; 
+    let dsKhach = []; 
+    let dsGiamGia = []; 
+    let dsLoaiKhach = []; 
+    let tongChuaGiam = 0;
 
-    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrow = new Date(); 
+    tomorrow.setDate(tomorrow.getDate() + 1);
     document.getElementById('ngayHen').value = tomorrow.toISOString().split('T')[0];
 
     function changeRole() {
         const role = document.getElementById('roleSelect').value;
-        document.querySelectorAll('.menu-item.manager-only').forEach(el => el.style.display = role === 'NV02' ? 'block' : 'none');
+        document.querySelectorAll('.menu-item.manager-only').forEach(el => {
+            el.style.display = role === 'NV02' ? 'block' : 'none';
+        });
         showTab('tab-tao-don');
     }
 
@@ -197,7 +226,11 @@
 
     async function init() {
         const [resDV, resNV, resLK, resKH, resGG] = await Promise.all([
-            fetch(API+'/dichvu'), fetch(API+'/nhanvien'), fetch(API+'/loaikhach'), fetch(API+'/khachhang'), fetch(API+'/giamgia')
+            fetch(API+'/dichvu'), 
+            fetch(API+'/nhanvien'), 
+            fetch(API+'/loaikhach'), 
+            fetch(API+'/khachhang'), 
+            fetch(API+'/giamgia')
         ]);
         dsDichVu = await resDV.json();
         dsKhach = await resKH.json();
@@ -237,7 +270,13 @@
         tongChuaGiam = 0;
         document.querySelector('#cart tbody').innerHTML = gioHang.map((item, idx) => {
             tongChuaGiam += item.don_gia * item.so_luong;
-            return `<tr><td>${item.ten_dv}</td><td>${Number(item.don_gia).toLocaleString()}</td><td>${item.so_luong}</td><td>${(item.don_gia * item.so_luong).toLocaleString()}</td><td><button onclick="gioHang.splice(${idx},1);renderCart()" style="background:#e74c3c; padding: 5px 10px;">X</button></td></tr>`;
+            return `<tr>
+                <td>${item.ten_dv}</td>
+                <td>${Number(item.don_gia).toLocaleString()}</td>
+                <td>${item.so_luong}</td>
+                <td>${(item.don_gia * item.so_luong).toLocaleString()}</td>
+                <td><button onclick="gioHang.splice(${idx},1);renderCart()" style="background:#e74c3c; padding: 5px 10px;">X</button></td>
+            </tr>`;
         }).join('');
         capNhatDropdownGiamGia();
         tinhTongTien();
@@ -275,72 +314,116 @@
     async function chotDon() {
         if(gioHang.length === 0) return alert("Giỏ hàng đang trống!");
         const body = {
-            sdt: document.getElementById('sdt').value, ten_kh: document.getElementById('ten').value,
-            dia_chi: document.getElementById('dia_chi').value, ma_loai: document.getElementById('ma_loai').value,
-            ma_nv: document.getElementById('nvSelect').value, ngay_hen: document.getElementById('ngayHen').value,
+            sdt: document.getElementById('sdt').value, 
+            ten_kh: document.getElementById('ten').value,
+            dia_chi: document.getElementById('dia_chi').value, 
+            ma_loai: document.getElementById('ma_loai').value,
+            ma_nv: document.getElementById('nvSelect').value, 
+            ngay_hen: document.getElementById('ngayHen').value,
             ma_gg: document.getElementById('ggSelect').value === "0" ? null : document.getElementById('ggSelect').value,
-            thanh_tien: document.getElementById('tongTien').innerText.replace(/\./g, ''), ds_dich_vu: gioHang
+            thanh_tien: document.getElementById('tongTien').innerText.replace(/\./g, ''), 
+            ds_dich_vu: gioHang
         };
         try {
-            const res = await fetch(API+'/hoadon', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+            const res = await fetch(API+'/hoadon', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify(body) 
+            });
             const data = await res.json();
             alert(data.message); 
-            gioHang = []; renderCart();
-            document.getElementById('sdt').value = ''; document.getElementById('ten').value = ''; document.getElementById('dia_chi').value = '';
-        } catch(e) { alert("Có lỗi xảy ra khi chốt đơn!"); }
+            gioHang = []; 
+            renderCart();
+            document.getElementById('sdt').value = ''; 
+            document.getElementById('ten').value = ''; 
+            document.getElementById('dia_chi').value = '';
+        } catch(e) { 
+            alert("Có lỗi xảy ra khi chốt đơn!"); 
+        }
     }
 
+    // =========================================================
+    // HÀM QUẢN LÝ HÓA ĐƠN (ĐÃ TÍCH HỢP CHI TIẾT DỊCH VỤ)
+    // =========================================================
     async function loadHoaDon() {
-        const res = await fetch(API+'/hoadon'); const ds = await res.json();
-        document.querySelector('#tableHD tbody').innerHTML = ds.map(h => `<tr>
-            <td><b>${h.ma_dd}</b></td><td>${h.ma_hd || 'N/A'}</td><td>${h.ten_kh || 'Khách lẻ'}</td>
-            <td style="color:#c0392b; font-weight:bold;">${new Date(h.ngay_hen).toLocaleDateString('vi-VN')}</td>
-            <td style="color:red;font-weight:bold;">${Number(h.thanh_tien || 0).toLocaleString('vi-VN')}đ</td>
-            <td>
-                <select onchange="updateStatus('${h.ma_hd}', this.value)" style="padding:4px; border: 1px solid #bdc3c7;">
-                    <option ${h.trang_thai==='Đã nhận' || h.trang_thai==='Chờ xử lý'?'selected':''}>Chờ xử lý</option>
-                    <option ${h.trang_thai==='Đang xử lý'?'selected':''}>Đang xử lý</option>
-                    <option ${h.trang_thai==='Hoàn thành'?'selected':''}>Hoàn thành</option>
-                    <option ${h.trang_thai==='Đã trả khách'?'selected':''}>Đã trả khách</option>
-                </select>
-            </td>
-            <td><button onclick="viewDetail('${h.ma_hd}')" ${!h.ma_hd ? 'disabled':''}>👁️</button></td>
-        </tr>`).join('');
+        const res = await fetch(API+'/hoadon'); 
+        const ds = await res.json();
+        
+        // Tự động gom hết chi tiết dịch vụ của tất cả hóa đơn cùng 1 lúc cho nhanh
+        const detailPromises = ds.map(h => h.ma_hd ? fetch(`${API}/hoadon/${h.ma_hd}/chitiet`).then(r => r.json()) : Promise.resolve([]));
+        const detailsArray = await Promise.all(detailPromises);
+
+        document.querySelector('#tableHD tbody').innerHTML = ds.map((h, index) => {
+            // Biến mảng chi tiết thành đoạn text (Ví dụ: "• Giặt chăn (2kg) <br> • Giặt áo (1kg)")
+            const ct = detailsArray[index];
+            const dvString = ct.length > 0 ? ct.map(c => `• ${c.ten_dv} (${c.so_luong}kg)`).join('<br>') : '<i style="color:gray;">Chưa có</i>';
+
+            return `<tr>
+                <td><b>${h.ma_dd}</b></td>
+                <td>${h.ma_hd || 'N/A'}</td>
+                <td>${h.ten_kh || 'Khách lẻ'}</td>
+                <td style="color:#c0392b; font-weight:bold;">${new Date(h.ngay_hen).toLocaleDateString('vi-VN')}</td>
+                <td style="font-size:13px; color:#2c3e50; line-height: 1.6;">${dvString}</td>
+                <td style="color:red;font-weight:bold;">${Number(h.thanh_tien || 0).toLocaleString('vi-VN')}đ</td>
+                <td>
+                    <select onchange="updateStatus('${h.ma_hd}', this.value)" style="padding:4px; border: 1px solid #bdc3c7;">
+                        <option ${h.trang_thai==='Đã nhận' || h.trang_thai==='Chờ xử lý'?'selected':''}>Chờ xử lý</option>
+                        <option ${h.trang_thai==='Đang xử lý'?'selected':''}>Đang xử lý</option>
+                        <option ${h.trang_thai==='Hoàn thành'?'selected':''}>Hoàn thành</option>
+                        <option ${h.trang_thai==='Đã trả khách'?'selected':''}>Đã trả khách</option>
+                    </select>
+                </td>
+                <td><button onclick="viewDetail('${h.ma_hd}')" ${!h.ma_hd ? 'disabled':''}>👁️</button></td>
+            </tr>`;
+        }).join('');
     }
 
     async function updateStatus(id, newStatus) {
-        await fetch(`${API}/hoadon/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ trang_thai: newStatus }) });
+        await fetch(`${API}/hoadon/${id}`, { 
+            method: 'PUT', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify({ trang_thai: newStatus }) 
+        });
         alert("Đã cập nhật trạng thái: " + newStatus);
     }
 
     async function viewDetail(id) {
-        const res = await fetch(`${API}/hoadon/${id}/chitiet`); const ct = await res.json();
+        const res = await fetch(`${API}/hoadon/${id}/chitiet`); 
+        const ct = await res.json();
+        
         document.getElementById('modalID').innerText = id;
-        document.querySelector('#tableCT tbody').innerHTML = ct.map(c => `<tr><td>${c.ten_dv}</td><td>${c.so_luong}</td><td>${Number(c.don_gia).toLocaleString('vi-VN')} đ</td><td>${(c.so_luong*c.don_gia).toLocaleString('vi-VN')} đ</td></tr>`).join('');
+        document.querySelector('#tableCT tbody').innerHTML = ct.map(c => `<tr>
+            <td>${c.ten_dv}</td>
+            <td>${c.so_luong}</td>
+            <td>${Number(c.don_gia).toLocaleString('vi-VN')} đ</td>
+            <td>${(c.so_luong*c.don_gia).toLocaleString('vi-VN')} đ</td>
+        </tr>`).join('');
+        
         document.getElementById('modal').style.display='block';
     }
 
-    // --- ĐÃ NÂNG CẤP: CHỨC NĂNG NÂNG HẠNG KHÁCH HÀNG ---
     async function loadKhachHang() {
-        const res = await fetch(API+'/khachhang'); dsKhach = await res.json();
+        const res = await fetch(API+'/khachhang'); 
+        dsKhach = await res.json();
         
         document.querySelector('#tableKH tbody').innerHTML = dsKhach.map(k => {
-            // Biến cột Loại Khách thành Dropdown Menu
             let selectHTML = `<select onchange="nangHangKhach('${k.ma_kh}', this.value)" style="padding: 4px; font-weight: bold; border: 1px solid #bdc3c7; border-radius: 4px;">`;
-            dsLoaiKhach.forEach(l => {
-                selectHTML += `<option value="${l.ma_loai}" ${k.ma_loai === l.ma_loai ? 'selected' : ''}>${l.ten_loai}</option>`;
+            dsLoaiKhach.forEach(l => { 
+                selectHTML += `<option value="${l.ma_loai}" ${k.ma_loai === l.ma_loai ? 'selected' : ''}>${l.ten_loai}</option>`; 
             });
             selectHTML += `</select>`;
 
             return `<tr>
-                <td>${k.ma_kh}</td><td><b>${k.ten_kh}</b></td><td>${k.sdt}</td><td>${k.dia_chi}</td>
+                <td>${k.ma_kh}</td>
+                <td><b>${k.ten_kh}</b></td>
+                <td>${k.sdt}</td>
+                <td>${k.dia_chi}</td>
                 <td>${selectHTML}</td>
                 <td><button class="btn-history" onclick="xemLichSuKhach('${k.ma_kh}', '${k.ten_kh}')">📜 Lịch sử</button></td>
             </tr>`;
         }).join('');
     }
 
-    // Hàm gọi API để lưu hạng mới xuống Database
     async function nangHangKhach(ma_kh, ma_loai_moi) {
         try {
             await fetch(`${API}/khachhang/${ma_kh}`, { 
@@ -349,51 +432,113 @@
                 body: JSON.stringify({ ma_loai: ma_loai_moi }) 
             });
             alert("Đã cập nhật hạng khách hàng thành công!");
-            
-            // Nếu khách đang được nhập SĐT ở trang Lập Đơn thì cập nhật lại giỏ hàng luôn
-            if (document.getElementById('sdt').value) {
-                init();
-            }
+            if (document.getElementById('sdt').value) init();
         } catch(e) { 
             alert("Lỗi cập nhật hạng khách hàng!"); 
         }
     }
 
+    // =========================================================
+    // HÀM XEM LỊCH SỬ (ĐÃ TÍCH HỢP CHI TIẾT DỊCH VỤ)
+    // =========================================================
     async function xemLichSuKhach(ma_kh, ten_kh) {
         document.getElementById('tenKhachLichSu').innerText = ten_kh;
         document.getElementById('modalLichSu').style.display = 'block';
-        document.getElementById('bodyLichSu').innerHTML = '<tr><td colspan="6" style="text-align:center;">Đang tải dữ liệu...</td></tr>';
+        document.getElementById('bodyLichSu').innerHTML = '<tr><td colspan="7" style="text-align:center;">Đang tải dữ liệu...</td></tr>';
+        
         try {
-            const res = await fetch(`${API}/khachhang/${ma_kh}/lichsu`); const data = await res.json();
-            if (data.length === 0) return document.getElementById('bodyLichSu').innerHTML = '<tr><td colspan="6" style="text-align:center;">Chưa có giao dịch nào.</td></tr>';
-            document.getElementById('bodyLichSu').innerHTML = data.map(log => `<tr>
-                <td>${new Date(log.ngay_nhan).toLocaleDateString('vi-VN')}</td>
-                <td>${new Date(log.ngay_hen).toLocaleDateString('vi-VN')}</td>
-                <td>${log.ma_dd}</td><td>${log.ma_hd || 'N/A'}</td>
-                <td style="color:red; font-weight:bold;">${Number(log.thanh_tien || 0).toLocaleString('vi-VN')} đ</td>
-                <td><b>${log.trang_thai}</b></td>
-            </tr>`).join('');
-        } catch(e) { document.getElementById('bodyLichSu').innerHTML = '<tr><td colspan="6" style="color:red;">Lỗi tải dữ liệu!</td></tr>'; }
+            const res = await fetch(`${API}/khachhang/${ma_kh}/lichsu`); 
+            const data = await res.json();
+            
+            if (data.length === 0) {
+                document.getElementById('bodyLichSu').innerHTML = '<tr><td colspan="7" style="text-align:center;">Chưa có giao dịch nào.</td></tr>';
+                return;
+            }
+            
+            // Tải chi tiết dịch vụ cho bảng lịch sử
+            const detailPromises = data.map(log => log.ma_hd ? fetch(`${API}/hoadon/${log.ma_hd}/chitiet`).then(r => r.json()) : Promise.resolve([]));
+            const detailsArray = await Promise.all(detailPromises);
+
+            document.getElementById('bodyLichSu').innerHTML = data.map((log, index) => {
+                const ct = detailsArray[index];
+                const dvString = ct.length > 0 ? ct.map(c => `• ${c.ten_dv} (${c.so_luong}kg)`).join('<br>') : '<i style="color:gray;">-</i>';
+
+                return `<tr>
+                    <td>${new Date(log.ngay_nhan).toLocaleDateString('vi-VN')}</td>
+                    <td>${new Date(log.ngay_hen).toLocaleDateString('vi-VN')}</td>
+                    <td>${log.ma_dd}</td>
+                    <td>${log.ma_hd || 'N/A'}</td>
+                    <td style="font-size:13px; color:#2c3e50; line-height: 1.6;">${dvString}</td>
+                    <td style="color:red; font-weight:bold;">${Number(log.thanh_tien || 0).toLocaleString('vi-VN')} đ</td>
+                    <td><b>${log.trang_thai}</b></td>
+                </tr>`;
+            }).join('');
+        } catch(e) { 
+            document.getElementById('bodyLichSu').innerHTML = '<tr><td colspan="7" style="color:red;">Lỗi tải dữ liệu!</td></tr>'; 
+        }
     }
 
     async function loadGiamGia() {
-        const res = await fetch(API+'/giamgia_all'); const ds = await res.json();
-        document.querySelector('#tableGG tbody').innerHTML = ds.map(g => `<tr><td>${g.ma_gg}</td><td>${g.ten_chuong_trinh}</td><td style="color:red;font-weight:bold;">${g.phan_tram}%</td><td>${g.dieu_kien}</td><td>${new Date(g.ngay_bat_dau).toLocaleDateString('vi-VN')} - ${new Date(g.ngay_ket_thuc).toLocaleDateString('vi-VN')}</td><td><button onclick="xoaGG('${g.ma_gg}')" style="background:#e74c3c;padding:5px; color:white; border:none; cursor:pointer; border-radius:3px;">Xóa</button></td></tr>`).join('');
+        const res = await fetch(API+'/giamgia_all'); 
+        const ds = await res.json();
+        
+        document.querySelector('#tableGG tbody').innerHTML = ds.map(g => `<tr>
+            <td>${g.ma_gg}</td>
+            <td>${g.ten_chuong_trinh}</td>
+            <td style="color:red;font-weight:bold;">${g.phan_tram}%</td>
+            <td>${g.dieu_kien}</td>
+            <td>${new Date(g.ngay_bat_dau).toLocaleDateString('vi-VN')} - ${new Date(g.ngay_ket_thuc).toLocaleDateString('vi-VN')}</td>
+            <td><button onclick="xoaGG('${g.ma_gg}')" style="background:#e74c3c;padding:5px; color:white; border:none; cursor:pointer; border-radius:3px;">Xóa</button></td>
+        </tr>`).join('');
     }
 
     async function themGiamGiaMoi() {
         const body = {
-            ten_chuong_trinh: document.getElementById('tenGG').value, phan_tram: document.getElementById('ptGG').value,
-            dieu_kien: document.getElementById('dkGG').value, ngay_bat_dau: document.getElementById('bdGG').value, ngay_ket_thuc: document.getElementById('ktGG').value
+            ten_chuong_trinh: document.getElementById('tenGG').value, 
+            phan_tram: document.getElementById('ptGG').value,
+            dieu_kien: document.getElementById('dkGG').value, 
+            ngay_bat_dau: document.getElementById('bdGG').value, 
+            ngay_ket_thuc: document.getElementById('ktGG').value
         };
-        await fetch(API+'/giamgia', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-        alert("Đã thêm mã!"); loadGiamGia(); init(); 
+        await fetch(API+'/giamgia', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify(body) 
+        });
+        alert("Đã thêm mã!"); 
+        loadGiamGia(); 
+        init(); 
     }
     
-    async function xoaGG(id) { if(confirm('Xóa mã này?')) { await fetch(API+'/giamgia/'+id, {method:'DELETE'}); loadGiamGia(); init(); } }
+    async function xoaGG(id) { 
+        if(confirm('Xóa mã này?')) { 
+            await fetch(API+'/giamgia/'+id, {method:'DELETE'}); 
+            loadGiamGia(); 
+            init(); 
+        } 
+    }
 
-    async function loadNhanVien() { const res = await fetch(API+'/nhanvien'); const ds = await res.json(); document.querySelector('#tableNV tbody').innerHTML = ds.map(n => `<tr><td>${n.ma_nv}</td><td>${n.ten_nv}</td><td>${n.sdt}</td><td>${n.chuc_vu}</td><td>${Number(n.luong).toLocaleString()}đ</td></tr>`).join(''); }
-    async function loadLoaiKhach() { const res = await fetch(API+'/loaikhach'); const ds = await res.json(); document.querySelector('#tableLK tbody').innerHTML = ds.map(l => `<tr><td>${l.ma_loai}</td><td>${l.ten_loai}</td><td>${l.mo_ta}</td></tr>`).join(''); }
+    async function loadNhanVien() { 
+        const res = await fetch(API+'/nhanvien'); 
+        const ds = await res.json(); 
+        document.querySelector('#tableNV tbody').innerHTML = ds.map(n => `<tr>
+            <td>${n.ma_nv}</td>
+            <td>${n.ten_nv}</td>
+            <td>${n.sdt}</td>
+            <td>${n.chuc_vu}</td>
+            <td>${Number(n.luong).toLocaleString()}đ</td>
+        </tr>`).join(''); 
+    }
+
+    async function loadLoaiKhach() { 
+        const res = await fetch(API+'/loaikhach'); 
+        const ds = await res.json(); 
+        document.querySelector('#tableLK tbody').innerHTML = ds.map(l => `<tr>
+            <td>${l.ma_loai}</td>
+            <td>${l.ten_loai}</td>
+            <td>${l.mo_ta}</td>
+        </tr>`).join(''); 
+    }
     
     async function loadDichVu() { 
         const res = await fetch(API+'/dichvu'); 
@@ -407,29 +552,27 @@
     }
 
     async function themDichVuMoi() {
-        const ten_dv = document.getElementById('tenDVMoi').value;
+        const ten_dv = document.getElementById('tenDVMoi').value; 
         const don_gia = document.getElementById('giaDVMoi').value;
         
         if (!ten_dv || !don_gia) return alert("Vui lòng nhập đủ Tên dịch vụ và Đơn giá!");
-
         try {
             const res = await fetch(API+'/dichvu', { 
                 method: 'POST', 
                 headers: {'Content-Type': 'application/json'}, 
                 body: JSON.stringify({ ten_dv, don_gia }) 
             });
-            const data = await res.json();
-            
+            const data = await res.json(); 
             if (data.error) throw new Error(data.error);
             
             alert(data.message || "Đã thêm dịch vụ thành công!");
-            document.getElementById('tenDVMoi').value = '';
+            document.getElementById('tenDVMoi').value = ''; 
             document.getElementById('giaDVMoi').value = '';
             
             loadDichVu(); 
             init(); 
-        } catch (err) {
-            alert("Lỗi: " + err.message);
+        } catch (err) { 
+            alert("Lỗi: " + err.message); 
         }
     }
 
@@ -437,12 +580,15 @@
         if (!confirm("Bạn có chắc chắn muốn xóa dịch vụ này?")) return;
         try {
             const res = await fetch(API+'/dichvu/' + id, { method: 'DELETE' });
-            const data = await res.json();
+            const data = await res.json(); 
             if (data.error) throw new Error(data.error);
-            alert(data.message || "Đã xóa!");
-            loadDichVu();
+            
+            alert(data.message || "Đã xóa!"); 
+            loadDichVu(); 
             init();
-        } catch (err) { alert(err.message); }
+        } catch (err) { 
+            alert(err.message); 
+        }
     }
 
     window.onload = init;
