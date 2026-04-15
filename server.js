@@ -110,6 +110,54 @@ app.delete('/api/dichvu/:id', async (req, res) => {
         res.json({ success: true, message: "Đã xóa dịch vụ!" });
     } catch (err) { res.status(500).json({ error: "Lỗi: Đang vướng khóa ngoại." }); }
 });
+// ==========================================
+// API: QUẢN LÝ DỊCH VỤ (THÊM, SỬA, XÓA)
+// ==========================================
+
+// 1. API Thêm Dịch Vụ Mới
+app.post('/api/dichvu', async (req, res) => {
+    const { ten_dv, don_gia } = req.body;
+    
+    if (!ten_dv || !don_gia) {
+        return res.status(400).json({ error: "Thiếu thông tin tên dịch vụ hoặc đơn giá!" });
+    }
+
+    try {
+        const ma_dv = generateID('DV'); // Tự động tạo mã DV (VD: DV1234)
+        await pool.query(
+            "INSERT INTO dich_vu (ma_dv, ten_dv, don_gia) VALUES (?, ?, ?)",
+            [ma_dv, ten_dv, don_gia]
+        );
+        res.json({ success: true, message: "Đã thêm dịch vụ mới vào Database!" });
+    } catch (err) { 
+        res.status(500).json({ error: err.message }); 
+    }
+});
+
+// 2. API Cập nhật (Sửa) giá hoặc tên dịch vụ
+app.put('/api/dichvu/:id', async (req, res) => {
+    const { ten_dv, don_gia } = req.body;
+    try {
+        await pool.query(
+            "UPDATE dich_vu SET ten_dv = ?, don_gia = ? WHERE ma_dv = ?",
+            [ten_dv, don_gia, req.params.id]
+        );
+        res.json({ success: true, message: "Đã cập nhật dịch vụ thành công!" });
+    } catch (err) { 
+        res.status(500).json({ error: err.message }); 
+    }
+});
+
+// 3. API Xóa Dịch Vụ
+app.delete('/api/dichvu/:id', async (req, res) => {
+    try {
+        await pool.query("DELETE FROM dich_vu WHERE ma_dv = ?", [req.params.id]);
+        res.json({ success: true, message: "Đã xóa dịch vụ khỏi hệ thống!" });
+    } catch (err) { 
+        // Bắt lỗi khóa ngoại: Nếu dịch vụ đã từng được khách giặt, Database sẽ chặn không cho xóa để bảo vệ hóa đơn cũ
+        res.status(500).json({ error: "Lỗi: Không thể xóa dịch vụ này vì đã có khách từng sử dụng (vướng khóa ngoại)!" }); 
+    }
+});
 
 // ==========================================
 // 3. API: HÓA ĐƠN & ĐƠN ĐẶT
