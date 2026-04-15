@@ -90,9 +90,9 @@
     </div>
 
     <div id="tab-khach-hang" class="card">
-        <h2>Quản Lý Khách Hàng (Tích hợp Lịch Sử)</h2>
+        <h2>Quản Lý Khách Hàng (Nâng Hạng & Lịch Sử)</h2>
         <table id="tableKH">
-            <thead><tr><th>Mã KH</th><th>Tên</th><th>SĐT</th><th>Địa Chỉ</th><th>Loại</th><th>Hành Động</th></tr></thead>
+            <thead><tr><th>Mã KH</th><th>Tên</th><th>SĐT</th><th>Địa Chỉ</th><th>Loại Khách (Nâng hạng)</th><th>Hành Động</th></tr></thead>
             <tbody></tbody>
         </table>
     </div>
@@ -139,7 +139,6 @@
             <input type="number" id="giaDVMoi" placeholder="Đơn giá (VNĐ)" min="1000" style="flex: 1; border: 2px solid #3498db;">
             <button onclick="themDichVuMoi()" style="background: #2ecc71;">+ Thêm Dịch Vụ Mới</button>
         </div>
-
         <table id="tableDV">
             <thead><tr><th style="width:15%">Mã DV</th><th style="width:35%">Tên Dịch Vụ</th><th style="width:25%">Đơn Giá</th><th>Hành Động</th></tr></thead>
             <tbody></tbody>
@@ -321,12 +320,43 @@
         document.getElementById('modal').style.display='block';
     }
 
+    // --- ĐÃ NÂNG CẤP: CHỨC NĂNG NÂNG HẠNG KHÁCH HÀNG ---
     async function loadKhachHang() {
         const res = await fetch(API+'/khachhang'); dsKhach = await res.json();
-        document.querySelector('#tableKH tbody').innerHTML = dsKhach.map(k => `<tr>
-            <td>${k.ma_kh}</td><td><b>${k.ten_kh}</b></td><td>${k.sdt}</td><td>${k.dia_chi}</td><td>${k.ma_loai}</td>
-            <td><button class="btn-history" onclick="xemLichSuKhach('${k.ma_kh}', '${k.ten_kh}')">📜 Lịch sử</button></td>
-        </tr>`).join('');
+        
+        document.querySelector('#tableKH tbody').innerHTML = dsKhach.map(k => {
+            // Biến cột Loại Khách thành Dropdown Menu
+            let selectHTML = `<select onchange="nangHangKhach('${k.ma_kh}', this.value)" style="padding: 4px; font-weight: bold; border: 1px solid #bdc3c7; border-radius: 4px;">`;
+            dsLoaiKhach.forEach(l => {
+                selectHTML += `<option value="${l.ma_loai}" ${k.ma_loai === l.ma_loai ? 'selected' : ''}>${l.ten_loai}</option>`;
+            });
+            selectHTML += `</select>`;
+
+            return `<tr>
+                <td>${k.ma_kh}</td><td><b>${k.ten_kh}</b></td><td>${k.sdt}</td><td>${k.dia_chi}</td>
+                <td>${selectHTML}</td>
+                <td><button class="btn-history" onclick="xemLichSuKhach('${k.ma_kh}', '${k.ten_kh}')">📜 Lịch sử</button></td>
+            </tr>`;
+        }).join('');
+    }
+
+    // Hàm gọi API để lưu hạng mới xuống Database
+    async function nangHangKhach(ma_kh, ma_loai_moi) {
+        try {
+            await fetch(`${API}/khachhang/${ma_kh}`, { 
+                method: 'PUT', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ ma_loai: ma_loai_moi }) 
+            });
+            alert("Đã cập nhật hạng khách hàng thành công!");
+            
+            // Nếu khách đang được nhập SĐT ở trang Lập Đơn thì cập nhật lại giỏ hàng luôn
+            if (document.getElementById('sdt').value) {
+                init();
+            }
+        } catch(e) { 
+            alert("Lỗi cập nhật hạng khách hàng!"); 
+        }
     }
 
     async function xemLichSuKhach(ma_kh, ten_kh) {
@@ -365,16 +395,14 @@
     async function loadNhanVien() { const res = await fetch(API+'/nhanvien'); const ds = await res.json(); document.querySelector('#tableNV tbody').innerHTML = ds.map(n => `<tr><td>${n.ma_nv}</td><td>${n.ten_nv}</td><td>${n.sdt}</td><td>${n.chuc_vu}</td><td>${Number(n.luong).toLocaleString()}đ</td></tr>`).join(''); }
     async function loadLoaiKhach() { const res = await fetch(API+'/loaikhach'); const ds = await res.json(); document.querySelector('#tableLK tbody').innerHTML = ds.map(l => `<tr><td>${l.ma_loai}</td><td>${l.ten_loai}</td><td>${l.mo_ta}</td></tr>`).join(''); }
     
-    // --- CÁC HÀM XỬ LÝ DỊCH VỤ ĐƯỢC CHÈN THÊM VÀO ĐÂY ---
     async function loadDichVu() { 
         const res = await fetch(API+'/dichvu'); 
         const ds = await res.json(); 
-        // Thêm nút Xóa vào cột cuối
         document.querySelector('#tableDV tbody').innerHTML = ds.map(d => `<tr>
             <td>${d.ma_dv}</td>
             <td>${d.ten_dv}</td>
             <td style="font-weight:bold; color:#2980b9;">${Number(d.don_gia).toLocaleString()}đ</td>
-            <td><button onclick="xoaDichVu('${d.ma_dv}')" style="background:#e74c3c; padding:5px 10px; border-radius:3px;">Xóa</button></td>
+            <td><button onclick="xoaDichVu('${d.ma_dv}')" style="background:#e74c3c; padding:5px 10px; border-radius:3px; color: white; cursor:pointer; border:none;">Xóa</button></td>
         </tr>`).join(''); 
     }
 
@@ -398,8 +426,8 @@
             document.getElementById('tenDVMoi').value = '';
             document.getElementById('giaDVMoi').value = '';
             
-            loadDichVu(); // Cập nhật lại bảng Quản lý Dịch vụ
-            init(); // Nạp lại danh sách Dịch vụ ở Dropdown tab Lập Đơn
+            loadDichVu(); 
+            init(); 
         } catch (err) {
             alert("Lỗi: " + err.message);
         }
@@ -407,19 +435,14 @@
 
     async function xoaDichVu(id) {
         if (!confirm("Bạn có chắc chắn muốn xóa dịch vụ này?")) return;
-        
         try {
             const res = await fetch(API+'/dichvu/' + id, { method: 'DELETE' });
             const data = await res.json();
-            
             if (data.error) throw new Error(data.error);
-            
             alert(data.message || "Đã xóa!");
             loadDichVu();
             init();
-        } catch (err) {
-            alert(err.message);
-        }
+        } catch (err) { alert(err.message); }
     }
 
     window.onload = init;
