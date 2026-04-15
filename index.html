@@ -2,64 +2,81 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Hệ Thống Giặt Là - Aiven Cloud Edition</title>
+    <title>Hệ Thống Giặt Là Pro - Đầy đủ tính năng</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f4f6f9; margin: 0; display: flex; height: 100vh; }
-        .sidebar { width: 260px; background: #2c3e50; color: white; padding: 20px; display: flex; flex-direction: column; }
+        .sidebar { width: 260px; background: #2c3e50; color: white; padding: 20px; display: flex; flex-direction: column; overflow-y: auto;}
         .sidebar h2 { text-align: center; border-bottom: 1px solid #34495e; padding-bottom: 15px; margin-top: 0; }
-        .menu-item { padding: 15px; margin: 5px 0; background: #34495e; border-radius: 5px; cursor: pointer; transition: 0.3s; }
+        .menu-item { padding: 12px; margin: 5px 0; background: #34495e; border-radius: 5px; cursor: pointer; transition: 0.3s; font-size: 15px;}
         .menu-item:hover, .menu-item.active { background: #3498db; }
         .manager-only { display: none; }
-        .role-box { margin-top: auto; background: #1abc9c; padding: 15px; border-radius: 5px; text-align: center; }
-        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        .role-box { margin-top: 20px; background: #1abc9c; padding: 15px; border-radius: 5px; text-align: center; }
+        .main-content { flex: 1; padding: 20px 30px; overflow-y: auto; }
         .page-section { display: none; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .page-section.active { display: block; }
         input, select, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; }
-        button { background: #3498db; color: white; font-weight: bold; border: none; cursor: pointer; }
+        button { background: #3498db; color: white; font-weight: bold; border: none; cursor: pointer; transition: 0.2s;}
+        button:hover { opacity: 0.9; }
         .btn-danger { background: #e74c3c; width: auto; padding: 8px 15px; }
         .btn-warning { background: #f39c12; width: auto; padding: 8px 15px; }
         .btn-success { background: #2ecc71; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background: #f8f9fa; }
-        .row-flex { display: flex; gap: 10px; margin-bottom: 10px; }
+        .btn-info { background: #9b59b6; width: auto; padding: 8px 15px;}
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px;}
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #f8f9fa; position: sticky; top: 0;}
+        .row-flex { display: flex; gap: 10px; margin-bottom: 10px; align-items: center;}
         .edit-input { padding: 6px; border: 2px solid #3498db; font-weight: bold; width: 90%; }
         .status-select:disabled { background: #ecf0f1; border-color: #bdc3c7; color: #7f8c8d; cursor: not-allowed; }
+        .badge { padding: 5px 10px; border-radius: 20px; color: white; font-size: 12px; font-weight: bold;}
+        .bg-green { background: #2ecc71;} .bg-orange { background: #e67e22;} .bg-red { background: #e74c3c;}
     </style>
 </head>
 <body>
 
     <div class="sidebar">
         <h2>GIẶT LÀ PRO</h2>
-        <div class="menu-item active" onclick="switchTab('tab-tao-don', this)">🛒 Lập Hóa Đơn</div>
-        <div class="menu-item" onclick="switchTab('tab-thong-ke', this)">📊 Danh Sách Hóa Đơn</div>
+        <div class="menu-item active" onclick="switchTab('tab-tao-don', this)">🛒 Lập Đơn & Hóa Đơn</div>
+        <div class="menu-item" onclick="switchTab('tab-thong-ke', this)">📊 QL Hóa Đơn & Thanh Toán</div>
         
+        <div class="menu-item manager-only" onclick="switchTab('tab-khach-hang', this)">👥 Quản Lý Khách Hàng</div>
+        <div class="menu-item manager-only" onclick="switchTab('tab-nhan-vien', this)">👨‍💼 Quản Lý Nhân Viên</div>
         <div class="menu-item manager-only" onclick="switchTab('tab-dich-vu', this)">⚙️ Quản Lý Dịch Vụ</div>
         <div class="menu-item manager-only" onclick="switchTab('tab-giam-gia', this)">🎁 Quản Lý Giảm Giá</div>
 
         <div class="role-box">
-            <label style="color: white; font-weight: bold;">👤 Người dùng:</label>
+            <label style="color: white; font-weight: bold;">Quyền hệ thống:</label>
             <select id="roleSelect" onchange="changeRole()">
-                <option value="NV01">Nhân Viên</option>
-                <option value="NV02">Quản Lý</option>
+                <option value="NV01">Giao diện Nhân Viên</option>
+                <option value="NV02">Giao diện Quản Lý</option>
             </select>
         </div>
     </div>
 
     <div class="main-content">
         <div id="tab-tao-don" class="page-section active">
-            <h2>🛒 Lập Hóa Đơn Mới</h2>
+            <h2>🛒 Lập Đơn Đặt & Hóa Đơn Mới</h2>
+            
+            <div style="background: #e8f4f8; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                <label style="font-weight: bold; color: #2980b9;">👨‍💼 Nhân viên tiếp nhận đơn:</label>
+                <select id="nvSelect" style="border: 2px solid #2980b9; font-weight: bold;"><option>Đang tải danh sách nhân viên...</option></select>
+            </div>
+
             <div style="background: #e8f4f8; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
                 <div class="row-flex">
-                    <input type="text" id="sdtKH" placeholder="Nhập SĐT..." list="danhSachSDT" oninput="tuDongDienTen()" style="flex: 1; border: 2px solid #3498db;">
+                    <input type="text" id="sdtKH" placeholder="Nhập SĐT khách..." list="danhSachSDT" oninput="tuDongDienTen()" style="flex: 1; border: 2px solid #3498db;">
                     <datalist id="danhSachSDT"></datalist>
                     <input type="text" id="tenKH" placeholder="Tên khách hàng" style="flex: 1;">
+                    <select id="loaiKH" style="flex: 1;">
+                        <option value="L01">Khách thường</option>
+                        <option value="L02">Khách VIP</option>
+                        <option value="L03">Khách thân thiết</option>
+                    </select>
                 </div>
-                <input type="text" id="diaChiKH" placeholder="Địa chỉ (Bắt buộc)">
+                <input type="text" id="diaChiKH" placeholder="Địa chỉ">
             </div>
 
             <div class="row-flex">
-                <select id="dvSelect" style="flex: 2;"><option>Đang tải dữ liệu từ Aiven Cloud...</option></select>
+                <select id="dvSelect" style="flex: 2;"><option>Đang tải dịch vụ...</option></select>
                 <input type="number" id="soLuong" value="1" min="1" style="flex: 1;">
                 <button onclick="themVaoGio()" style="flex: 1; background: #f39c12;">Thêm Dịch vụ</button>
             </div>
@@ -70,20 +87,45 @@
             </table>
 
             <div style="margin-top: 15px; background: #fff3cd; padding: 15px; border-left: 5px solid #ffc107;">
-                <label style="font-weight: bold; color: #d35400;">🎁 Chọn Mã Giảm Giá CÒN HẠN:</label>
+                <label style="font-weight: bold; color: #d35400;">🎁 Chọn Mã Giảm Giá:</label>
                 <select id="ggSelect" onchange="tinhTongTien()"><option value="0">Không dùng</option></select>
             </div>
 
             <h2 style="text-align: right; color: #e74c3c;">Thanh toán: <span id="tongTien">0</span> đ</h2>
-            <button onclick="chotDon()" class="btn-success" style="font-size: 18px; padding: 15px; width: 100%;">CHỐT ĐƠN HÀNG</button>
+            <button onclick="chotDon()" class="btn-success" style="font-size: 18px; padding: 15px; width: 100%;">TẠO HÓA ĐƠN & GHI NHẬN ĐƠN</button>
         </div>
 
         <div id="tab-thong-ke" class="page-section">
-            <h2>📊 Danh Sách Hóa Đơn (Thời gian thực)</h2>
-            <p><i>* Dữ liệu được đồng bộ trực tiếp từ Aiven MySQL Database.</i></p>
+            <h2>📊 Quản Lý Hóa Đơn & Thanh Toán</h2>
             <table>
-                <thead><tr><th>Mã HĐ</th><th>Khách Hàng</th><th>Ngày Lập</th><th>Thành Tiền</th><th>Cập Nhật Trạng Thái</th></tr></thead>
+                <thead><tr><th>Mã HĐ</th><th>Khách Hàng</th><th>Mã Đơn Đặt</th><th>Ngày Nhận</th><th>Thành Tiền</th><th>Trạng Thái HĐ</th><th>Thanh Toán</th></tr></thead>
                 <tbody id="bangHoaDon"></tbody>
+            </table>
+        </div>
+
+        <div id="tab-khach-hang" class="page-section">
+            <h2>👥 Danh Sách Khách Hàng</h2>
+            <table>
+                <thead><tr><th>Mã KH</th><th>Tên Khách Hàng</th><th>SĐT</th><th>Địa Chỉ</th><th>Loại Khách</th></tr></thead>
+                <tbody id="bangKhachHang"></tbody>
+            </table>
+        </div>
+
+        <div id="tab-nhan-vien" class="page-section">
+            <h2>👨‍💼 Quản Lý Nhân Sự</h2>
+            <div class="row-flex" style="background: #f8f9fa; padding: 15px;">
+                <input type="text" id="tenNV" placeholder="Tên nhân viên mới">
+                <input type="text" id="sdtNV" placeholder="Số điện thoại">
+                <select id="chucVuNV">
+                    <option value="Nhân viên">Nhân viên</option>
+                    <option value="Quản lý">Quản lý</option>
+                </select>
+                <input type="number" id="luongNV" placeholder="Lương cơ bản (VNĐ)">
+                <button onclick="themNhanVienMoi()" class="btn-success" style="width: 150px;">+ Thêm NV</button>
+            </div>
+            <table>
+                <thead><tr><th>Mã NV</th><th>Tên Nhân Viên</th><th>SĐT</th><th>Chức Vụ</th><th>Lương Cơ Bản</th></tr></thead>
+                <tbody id="bangNhanVien"></tbody>
             </table>
         </div>
 
@@ -124,23 +166,17 @@
     <script>
         const API_URL = 'https://tiemgiatvandung.onrender.com/api';
         
-        let gioHang = [];
-        let dsDichVuGoc = [];
-        let dsKhachHang = [];
-        let dsGiamGiaGoc = []; 
-        let tongChuaGiamHienTai = 0;
+        let gioHang = []; let dsDichVuGoc = []; let dsKhachHang = []; let dsGiamGiaGoc = []; let tongChuaGiamHienTai = 0;
 
         function changeRole() {
             const role = document.getElementById('roleSelect').value;
             document.querySelectorAll('.menu-item.manager-only').forEach(el => el.style.display = role === 'NV02' ? 'block' : 'none');
             const activeTab = document.querySelector('.page-section.active').id;
-            if(activeTab === 'tab-thong-ke') loadBangHoaDon();
-            if(role === 'NV01' && (activeTab === 'tab-dich-vu' || activeTab === 'tab-giam-gia')) {
-                switchTab('tab-tao-don', document.querySelectorAll('.menu-item')[0]);
-            }
+            switchTab(activeTab, document.querySelector(`.menu-item[onclick*="${activeTab}"]`));
         }
 
         function switchTab(tabId, element) {
+            if(!element) return;
             document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
             element.classList.add('active');
             document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
@@ -150,43 +186,43 @@
             if(tabId === 'tab-giam-gia') loadBangGiamGia();
             if(tabId === 'tab-thong-ke') loadBangHoaDon();
             if(tabId === 'tab-tao-don') initTaoDon();
+            if(tabId === 'tab-khach-hang') loadBangKhachHang();
+            if(tabId === 'tab-nhan-vien') loadBangNhanVien();
         }
 
+        // --- KHỞI TẠO & LẬP ĐƠN ---
         async function initTaoDon() {
             try {
-                const [resKH, resDV, resGG] = await Promise.all([
-                    fetch(`${API_URL}/khachhang`),
-                    fetch(`${API_URL}/dichvu`),
-                    fetch(`${API_URL}/giamgia`)
+                // Thêm API nhân viên vào đây để tải dropdown
+                const [resKH, resDV, resGG, resNV] = await Promise.all([ 
+                    fetch(`${API_URL}/khachhang`), fetch(`${API_URL}/dichvu`), fetch(`${API_URL}/giamgia`), fetch(`${API_URL}/nhanvien`) 
                 ]);
-
+                
                 dsKhachHang = await resKH.json();
                 document.getElementById('danhSachSDT').innerHTML = dsKhachHang.map(kh => `<option value="${kh.sdt}">`).join('');
-
+                
                 dsDichVuGoc = await resDV.json();
-                const dvSelect = document.getElementById('dvSelect');
-                if (dsDichVuGoc.length > 0) {
-                    dvSelect.innerHTML = dsDichVuGoc.map(dv => `<option value="${dv.ma_dv}">${dv.ten_dv} - ${Number(dv.don_gia).toLocaleString('vi-VN')}đ</option>`).join('');
-                } else {
-                    dvSelect.innerHTML = '<option>Aiven Cloud: Database trống!</option>';
-                }
+                document.getElementById('dvSelect').innerHTML = dsDichVuGoc.length > 0 ? dsDichVuGoc.map(dv => `<option value="${dv.ma_dv}">${dv.ten_dv} - ${Number(dv.don_gia).toLocaleString('vi-VN')}đ</option>`).join('') : '<option>Database trống!</option>';
+                
+                // Đổ dữ liệu vào Dropdown Nhân Viên Nhận Đơn
+                const dsNV = await resNV.json();
+                document.getElementById('nvSelect').innerHTML = dsNV.length > 0 ? dsNV.map(nv => `<option value="${nv.ma_nv}">${nv.ten_nv} - Chức vụ: ${nv.chuc_vu}</option>`).join('') : '<option>Chưa có nhân viên</option>';
 
-                dsGiamGiaGoc = await resGG.json();
-                capNhatDropdownGiamGia(); 
-            } catch (err) {
-                console.error("Lỗi kết nối Render/Aiven:", err);
-                document.getElementById('dvSelect').innerHTML = '<option>Lỗi kết nối Server Aiven!</option>';
-            }
+                dsGiamGiaGoc = await resGG.json(); capNhatDropdownGiamGia(); 
+            } catch (err) { console.error(err); }
         }
 
         function tuDongDienTen() {
             const khach = dsKhachHang.find(kh => kh.sdt === document.getElementById('sdtKH').value);
-            if(khach) { document.getElementById('tenKH').value = khach.ten_kh; document.getElementById('diaChiKH').value = khach.dia_chi; }
+            if(khach) { 
+                document.getElementById('tenKH').value = khach.ten_kh; 
+                document.getElementById('diaChiKH').value = khach.dia_chi; 
+                document.getElementById('loaiKH').value = khach.ma_loai || 'L01';
+            }
         }
 
         function themVaoGio() {
-            const ma_dv = document.getElementById('dvSelect').value;
-            const dv = dsDichVuGoc.find(d => d.ma_dv === ma_dv);
+            const ma_dv = document.getElementById('dvSelect').value; const dv = dsDichVuGoc.find(d => d.ma_dv === ma_dv);
             if(!dv) return;
             const sl = parseInt(document.getElementById('soLuong').value);
             const item = gioHang.find(i => i.ma_dv === ma_dv);
@@ -194,116 +230,125 @@
             renderGio();
         }
 
-        function xoaKhoiGio(index) {
-            gioHang.splice(index, 1);
-            renderGio();
-        }
+        function xoaKhoiGio(index) { gioHang.splice(index, 1); renderGio(); }
 
         function renderGio() {
             tongChuaGiamHienTai = 0;
-            document.getElementById('cartBody').innerHTML = gioHang.map((i, index) => {
-                const thanhTien = i.don_gia * i.so_luong;
-                tongChuaGiamHienTai += thanhTien;
-                return `<tr><td>${i.ten_dv}</td><td>${i.don_gia.toLocaleString('vi-VN')}</td><td>${i.so_luong}</td><td>${thanhTien.toLocaleString('vi-VN')}</td><td><button class="remove-btn" style="background:#e74c3c;color:white;border:none;" onclick="xoaKhoiGio(${index})">X</button></td></tr>`;
+            document.getElementById('cartBody').innerHTML = gioHang.map((i, idx) => {
+                const tt = i.don_gia * i.so_luong; tongChuaGiamHienTai += tt;
+                return `<tr><td>${i.ten_dv}</td><td>${i.don_gia.toLocaleString('vi-VN')}</td><td>${i.so_luong}</td><td>${tt.toLocaleString('vi-VN')}</td><td><button class="btn-danger" onclick="xoaKhoiGio(${idx})">X</button></td></tr>`;
             }).join('');
             capNhatDropdownGiamGia(); tinhTongTien();
         }
 
         function capNhatDropdownGiamGia() {
-            const selectGG = document.getElementById('ggSelect');
-            const maDangChon = selectGG.value;
-            let ggOptions = '<option value="0" data-phantram="0">Không dùng mã</option>';
+            const selectGG = document.getElementById('ggSelect'); const maDangChon = selectGG.value;
+            let opt = '<option value="0" data-phantram="0">Không dùng</option>';
             dsGiamGiaGoc.forEach(gg => {
-                let match = gg.dieu_kien.match(/\d+/); 
-                let dkGiaTri = match ? parseInt(match[0]) * (gg.dieu_kien.toLowerCase().includes('k') ? 1000 : 1) : 0;
-                if (tongChuaGiamHienTai >= dkGiaTri) {
-                    ggOptions += `<option value="${gg.ma_gg}" data-phantram="${gg.phan_tram}">${gg.ten_chuong_trinh} (-${gg.phan_tram}%)</option>`;
-                }
+                let val = gg.dieu_kien.match(/\d+/) ? parseInt(gg.dieu_kien.match(/\d+/)[0]) * (gg.dieu_kien.includes('k') ? 1000 : 1) : 0;
+                if (tongChuaGiamHienTai >= val) opt += `<option value="${gg.ma_gg}" data-phantram="${gg.phan_tram}">${gg.ten_chuong_trinh} (-${gg.phan_tram}%)</option>`;
             });
-            selectGG.innerHTML = ggOptions;
-            if(selectGG.querySelector(`option[value="${maDangChon}"]`)) selectGG.value = maDangChon; else selectGG.value = "0";
+            selectGG.innerHTML = opt; selectGG.value = selectGG.querySelector(`option[value="${maDangChon}"]`) ? maDangChon : "0";
         }
 
         function tinhTongTien() {
             const selectGG = document.getElementById('ggSelect');
-            let phanTramGiam = selectGG.selectedIndex > 0 ? Number(selectGG.options[selectGG.selectedIndex].getAttribute('data-phantram')) : 0;
-            const tongDaGiam = tongChuaGiamHienTai - (tongChuaGiamHienTai * (phanTramGiam / 100));
-            document.getElementById('tongTien').innerText = Math.round(tongDaGiam).toLocaleString('vi-VN');
-            window.thanhTienCuoiCung = Math.round(tongDaGiam);
+            let pt = selectGG.selectedIndex > 0 ? Number(selectGG.options[selectGG.selectedIndex].getAttribute('data-phantram')) : 0;
+            window.thanhTienCuoiCung = Math.round(tongChuaGiamHienTai - (tongChuaGiamHienTai * (pt / 100)));
+            document.getElementById('tongTien').innerText = window.thanhTienCuoiCung.toLocaleString('vi-VN');
         }
 
         async function chotDon() {
-            const sdt = document.getElementById('sdtKH').value;
-            const ten = document.getElementById('tenKH').value;
-            const dia_chi = document.getElementById('diaChiKH').value;
-            const ma_nv = document.getElementById('roleSelect').value;
-            const ma_gg = document.getElementById('ggSelect').value;
-            
-            if(!sdt || !ten || !dia_chi) return alert("Điền đủ Tên, SĐT, Địa chỉ!");
             if(gioHang.length === 0) return alert("Giỏ hàng trống!");
-
-            const payload = { sdt, ten_kh: ten, dia_chi, ma_nv, ma_gg: ma_gg === "0" ? null : ma_gg, thanh_tien: window.thanhTienCuoiCung, ds_dich_vu: gioHang };
             
+            // Lấy mã nhân viên từ ô Dropdown Nhân viên mới thay vì từ Quyền hệ thống
+            const ma_nv_duoc_chon = document.getElementById('nvSelect').value;
+
+            const payload = { 
+                sdt: document.getElementById('sdtKH').value, ten_kh: document.getElementById('tenKH').value, 
+                dia_chi: document.getElementById('diaChiKH').value, ma_loai: document.getElementById('loaiKH').value,
+                ma_nv: ma_nv_duoc_chon, // <-- Sử dụng biến này
+                ma_gg: document.getElementById('ggSelect').value === "0" ? null : document.getElementById('ggSelect').value, 
+                thanh_tien: window.thanhTienCuoiCung, ds_dich_vu: gioHang 
+            };
             try {
                 const res = await fetch(`${API_URL}/hoadon`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-                const data = await res.json();
-                alert(data.message);
-                
-                gioHang = []; 
-                renderGio();
-                document.getElementById('sdtKH').value = ''; 
-                document.getElementById('tenKH').value = ''; 
-                document.getElementById('diaChiKH').value = '';
-                
+                alert((await res.json()).message);
+                gioHang = []; renderGio(); document.getElementById('sdtKH').value = ''; document.getElementById('tenKH').value = ''; document.getElementById('diaChiKH').value = '';
                 loadBangHoaDon();
-            } catch (err) {
-                alert("Lỗi khi gửi đơn hàng lên Aiven Cloud!");
-            }
+            } catch (err) { alert("Lỗi gửi đơn!"); }
         }
 
+        // --- CÁC HÀM QUẢN LÝ BẢNG ---
         async function loadBangHoaDon() {
             try {
-                const res = await fetch(`${API_URL}/hoadon`);
-                const ds = await res.json();
-                const role = document.getElementById('roleSelect').value;
-                const isNhanVien = (role === 'NV01'); 
-                
+                const res = await fetch(`${API_URL}/hoadon`); const ds = await res.json();
                 document.getElementById('bangHoaDon').innerHTML = ds.map(hd => {
-                    const nhan = new Date(hd.ngay_nhan).toLocaleDateString('vi-VN');
+                    let statusColor = hd.trang_thai === 'Đã xong' ? 'bg-green' : (hd.trang_thai === 'Chờ xử lý' ? 'bg-red' : 'bg-orange');
                     return `<tr>
-                        <td>${hd.ma_hd}</td><td>${hd.ten_kh}</td><td>${nhan}</td>
+                        <td><strong>${hd.ma_hd}</strong></td>
+                        <td>${hd.ten_kh || 'Khách lẻ'}</td>
+                        <td>${hd.ma_dd || 'N/A'}</td>
+                        <td>${new Date(hd.ngay_nhan).toLocaleDateString('vi-VN')}</td>
                         <td style="color:red; font-weight:bold;">${Number(hd.thanh_tien).toLocaleString('vi-VN')} đ</td>
-                        <td>
-                            <select id="status-${hd.ma_hd}" class="status-select" onchange="capNhatTrangThaiHD('${hd.ma_hd}')" 
-                                    style="font-weight: bold; border: 2px solid ${isNhanVien ? '#bdc3c7' : '#e67e22'}; padding: 5px; width: 100%" 
-                                    ${isNhanVien ? 'disabled' : ''}>
-                                <option value="Chờ xử lý" ${hd.trang_thai === 'Chờ xử lý' ? 'selected' : ''}>Chờ xử lý</option>
-                                <option value="Đang làm đơn" ${hd.trang_thai === 'Đang làm đơn' ? 'selected' : ''}>Đang làm đơn</option>
-                                <option value="Đã xong" ${hd.trang_thai === 'Đã xong' ? 'selected' : ''}>Đã xong</option>
-                                <option value="Đã trả khách" ${hd.trang_thai === 'Đã trả khách' ? 'selected' : ''}>Đã trả khách</option>
-                            </select>
-                        </td>
+                        <td><span class="badge ${statusColor}">${hd.trang_thai}</span></td>
+                        <td><button class="btn-info" onclick="xemThanhToan('${hd.ma_hd}')">💸 Chi tiết TT</button></td>
                     </tr>`;
                 }).join('');
-            } catch (err) {
-                document.getElementById('bangHoaDon').innerHTML = '<tr><td colspan="5">Lỗi tải dữ liệu hóa đơn từ Aiven!</td></tr>';
-            }
+            } catch (err) { document.getElementById('bangHoaDon').innerHTML = '<tr><td colspan="7">Đang chờ API cập nhật Hóa Đơn/Đơn Đặt...</td></tr>'; }
         }
 
-        async function capNhatTrangThaiHD(id) {
-            const trangThaiMoi = document.getElementById(`status-${id}`).value;
-            await fetch(`${API_URL}/hoadon/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ trang_thai: trangThaiMoi }) });
-            alert("Đã cập nhật trạng thái lên Aiven: " + trangThaiMoi);
+        async function loadBangKhachHang() {
+            try {
+                const res = await fetch(`${API_URL}/khachhang`); const ds = await res.json();
+                document.getElementById('bangKhachHang').innerHTML = ds.map(kh => `<tr><td>${kh.ma_kh}</td><td><strong>${kh.ten_kh}</strong></td><td>${kh.sdt}</td><td>${kh.dia_chi}</td><td>${kh.ma_loai === 'L02' ? '⭐ VIP' : (kh.ma_loai === 'L03' ? '💙 Thân thiết' : 'Khách thường')}</td></tr>`).join('');
+            } catch (err) { document.getElementById('bangKhachHang').innerHTML = '<tr><td colspan="5">Lỗi tải dữ liệu Khách hàng!</td></tr>'; }
         }
+
+        // === QUẢN LÝ NHÂN VIÊN ===
+        async function loadBangNhanVien() {
+            try {
+                const res = await fetch(`${API_URL}/nhanvien`); const ds = await res.json();
+                document.getElementById('bangNhanVien').innerHTML = ds.map(nv => `<tr><td>${nv.ma_nv}</td><td><strong>${nv.ten_nv}</strong></td><td>${nv.sdt}</td><td><span class="badge ${nv.chuc_vu === 'Quản lý' ? 'bg-red' : 'bg-green'}">${nv.chuc_vu}</span></td><td>${Number(nv.luong).toLocaleString('vi-VN')} đ</td></tr>`).join('');
+            } catch (err) { document.getElementById('bangNhanVien').innerHTML = '<tr><td colspan="5">Lỗi API /api/nhanvien. Chưa lấy được dữ liệu!</td></tr>'; }
+        }
+
+        async function themNhanVienMoi() {
+            const ten_nv = document.getElementById('tenNV').value;
+            const sdt = document.getElementById('sdtNV').value;
+            const chuc_vu = document.getElementById('chucVuNV').value;
+            const luong = document.getElementById('luongNV').value;
+            
+            if(!ten_nv || !sdt || !luong) return alert("Vui lòng điền đủ Tên, SĐT và Lương!");
+            
+            try {
+                await fetch(`${API_URL}/nhanvien`, { 
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify({ ten_nv, sdt, chuc_vu, luong }) 
+                });
+                alert("Đã thêm Nhân viên mới thành công!");
+                
+                // Reset form
+                document.getElementById('tenNV').value = ''; document.getElementById('sdtNV').value = ''; document.getElementById('luongNV').value = '';
+                
+                // Tải lại bảng nhân viên
+                loadBangNhanVien();
+                // Tải lại cả danh sách nhân viên ở phần Lập Hóa Đơn để có tên người mới ngay
+                initTaoDon();
+            } catch (err) { alert("Lỗi khi thêm nhân viên!"); }
+        }
+        // ==========================
+
+        function xemThanhToan(maHD) { alert(`Tính năng Modal xem Chi tiết thanh toán cho Hóa Đơn ${maHD} đang được hoàn thiện!`); }
 
         async function loadBangDichVu() { const res = await fetch(`${API_URL}/dichvu`); const ds = await res.json(); document.getElementById('bangDichVu').innerHTML = ds.map(dv => `<tr><td><strong>${dv.ma_dv}</strong></td><td><input type="text" id="ten-${dv.ma_dv}" class="edit-input" value="${dv.ten_dv}"></td><td><input type="number" id="gia-${dv.ma_dv}" class="edit-input" value="${Number(dv.don_gia)}"></td><td><button class="btn-warning" onclick="suaDichVu('${dv.ma_dv}')">Lưu Sửa</button> <button class="btn-danger" onclick="xoaDichVu('${dv.ma_dv}')">Xóa</button></td></tr>`).join(''); }
-        async function themDichVuMoi() { const ten = document.getElementById('tenDV').value; const gia = document.getElementById('giaDV').value; if(!ten || !gia) return; await fetch(`${API_URL}/dichvu`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ten_dv: ten, don_gia: gia }) }); document.getElementById('tenDV').value = ''; document.getElementById('giaDV').value = ''; loadBangDichVu(); }
-        async function suaDichVu(id) { const ten = document.getElementById(`ten-${id}`).value; const gia = document.getElementById(`gia-${id}`).value; await fetch(`${API_URL}/dichvu/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ten_dv: ten, don_gia: gia }) }); alert("Đã cập nhật dữ liệu mới lên Aiven Cloud!"); }
-        async function xoaDichVu(id) { if(!confirm("Xác nhận xóa?")) return; await fetch(`${API_URL}/dichvu/${id}`, { method: 'DELETE' }); loadBangDichVu(); }
+        async function themDichVuMoi() { const ten = document.getElementById('tenDV').value; const gia = document.getElementById('giaDV').value; if(!ten || !gia) return; await fetch(`${API_URL}/dichvu`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ten_dv: ten, don_gia: gia }) }); loadBangDichVu(); }
+        async function suaDichVu(id) { await fetch(`${API_URL}/dichvu/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ten_dv: document.getElementById(`ten-${id}`).value, don_gia: document.getElementById(`gia-${id}`).value }) }); alert("Đã cập nhật!"); }
+        async function xoaDichVu(id) { if(confirm("Xác nhận xóa?")) { await fetch(`${API_URL}/dichvu/${id}`, { method: 'DELETE' }); loadBangDichVu(); } }
 
-        async function loadBangGiamGia() { const res = await fetch(`${API_URL}/giamgia_all`); const ds = await res.json(); document.getElementById('bangGiamGia').innerHTML = ds.map(gg => { const bd = new Date(gg.ngay_bat_dau).toLocaleDateString('vi-VN'); const kt = new Date(gg.ngay_ket_thuc).toLocaleDateString('vi-VN'); const isExpired = new Date(gg.ngay_ket_thuc) < new Date(); return `<tr><td><strong>${gg.ma_gg}</strong></td><td>${gg.ten_chuong_trinh} <br> <small><i>${gg.dieu_kien}</i></small></td><td style="color:red; font-weight:bold;">${gg.phan_tram}%</td><td style="${isExpired ? 'color:gray; text-decoration: line-through;' : 'color:green;'}">${bd} - ${kt} ${isExpired ? '(Hết hạn)' : ''}</td><td><button class="btn-danger" onclick="xoaGiamGia('${gg.ma_gg}')">Xóa</button></td></tr>`; }).join(''); }
-        async function themGiamGiaMoi() { const ten_chuong_trinh = document.getElementById('tenGG').value; const phan_tram = document.getElementById('ptGG').value; const dieu_kien = document.getElementById('dkGG').value; const ngay_bat_dau = document.getElementById('bdGG').value; const ngay_ket_thuc = document.getElementById('ktGG').value; if(!ten_chuong_trinh || !phan_tram || !ngay_bat_dau || !ngay_ket_thuc) return; await fetch(`${API_URL}/giamgia`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ten_chuong_trinh, phan_tram, dieu_kien, ngay_bat_dau, ngay_ket_thuc }) }); document.getElementById('tenGG').value = ''; document.getElementById('ptGG').value = ''; document.getElementById('dkGG').value = ''; document.getElementById('bdGG').value = ''; document.getElementById('ktGG').value = ''; loadBangGiamGia(); }
-        async function xoaGiamGia(id) { if(!confirm("Xác nhận xóa?")) return; await fetch(`${API_URL}/giamgia/${id}`, { method: 'DELETE' }); loadBangGiamGia(); }
+        async function loadBangGiamGia() { const res = await fetch(`${API_URL}/giamgia_all`); const ds = await res.json(); document.getElementById('bangGiamGia').innerHTML = ds.map(gg => { const isExpired = new Date(gg.ngay_ket_thuc) < new Date(); return `<tr><td><strong>${gg.ma_gg}</strong></td><td>${gg.ten_chuong_trinh} <br> <small><i>${gg.dieu_kien}</i></small></td><td style="color:red; font-weight:bold;">${gg.phan_tram}%</td><td style="${isExpired ? 'color:gray; text-decoration: line-through;' : 'color:green;'}">${new Date(gg.ngay_bat_dau).toLocaleDateString('vi-VN')} - ${new Date(gg.ngay_ket_thuc).toLocaleDateString('vi-VN')} ${isExpired ? '(Hết hạn)' : ''}</td><td><button class="btn-danger" onclick="xoaGiamGia('${gg.ma_gg}')">Xóa</button></td></tr>`; }).join(''); }
+        async function themGiamGiaMoi() { await fetch(`${API_URL}/giamgia`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ten_chuong_trinh: document.getElementById('tenGG').value, phan_tram: document.getElementById('ptGG').value, dieu_kien: document.getElementById('dkGG').value, ngay_bat_dau: document.getElementById('bdGG').value, ngay_ket_thuc: document.getElementById('ktGG').value }) }); loadBangGiamGia(); }
+        async function xoaGiamGia(id) { if(confirm("Xác nhận xóa?")) { await fetch(`${API_URL}/giamgia/${id}`, { method: 'DELETE' }); loadBangGiamGia(); } }
 
         initTaoDon(); changeRole();
     </script>
