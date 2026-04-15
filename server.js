@@ -343,7 +343,29 @@ app.put('/api/hoadon/:id', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 
 });
+// ==========================================
+// API: NHÂN VIÊN
+// ==========================================
+// Lấy danh sách nhân viên
+app.get('/api/nhanvien', async (req, res) => {
+    try {
+        const [rows] = await pool.query("SELECT * FROM nhan_vien");
+        res.json(rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
+// Quản lý thêm nhân viên mới
+app.post('/api/nhanvien', async (req, res) => {
+    const { ten_nv, sdt, chuc_vu, luong } = req.body;
+    try {
+        const ma_nv = 'NV' + Math.floor(1000 + Math.random() * 9000);
+        await pool.query(
+            "INSERT INTO nhan_vien (ma_nv, ten_nv, sdt, chuc_vu, luong) VALUES (?, ?, ?, ?, ?)",
+            [ma_nv, ten_nv, sdt, chuc_vu, luong]
+        );
+        res.json({ success: true, message: "Đã thêm nhân viên mới!" });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 
 // ==========================================
