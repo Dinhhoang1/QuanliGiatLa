@@ -306,7 +306,17 @@ app.get('/api/khachhang/:id/lichsu', async (req, res) => {
         res.json(rows);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
-
+// ==========================================
+// API NÂNG HẠNG KHÁCH HÀNG
+// ==========================================
+app.put('/api/khachhang/:id', async (req, res) => {
+    try {
+        await pool.query("UPDATE khach_hang SET ma_loai = ? WHERE ma_kh = ?", [req.body.ma_loai, req.params.id]);
+        res.json({ success: true, message: "Đã cập nhật hạng khách hàng!" });
+    } catch (err) { 
+        res.status(500).json({ error: err.message }); 
+    }
+});
 // ==========================================
 // 4. CHẠY SERVER
 // ==========================================
