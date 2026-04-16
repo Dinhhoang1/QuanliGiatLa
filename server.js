@@ -368,6 +368,33 @@ app.delete('/api/nhanvien/:id', async (req, res) => {
     }
 });
 // ==========================================
+// API: QUẢN LÝ THANH TOÁN
+// ==========================================
+// Lấy lịch sử thanh toán của 1 hóa đơn
+app.get('/api/hoadon/:id/thanhtoan', async (req, res) => {
+    try {
+        const [rows] = await pool.query("SELECT * FROM thanh_toan WHERE ma_hd = ? ORDER BY ngay_thanh_toan DESC", [req.params.id]);
+        res.json(rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Thêm 1 lần thanh toán mới
+app.post('/api/thanhtoan', async (req, res) => {
+    const { ma_hd, so_tien, phuong_thuc, trang_thai } = req.body;
+    try {
+        const ma_tt = generateID('TT'); // Tự động tạo mã TT (VD: TT1234)
+        const ngay_thanh_toan = new Date().toISOString().split('T')[0]; // Lấy ngày hiện tại
+        
+        await pool.query(
+            "INSERT INTO thanh_toan (ma_tt, ma_hd, ngay_thanh_toan, so_tien, phuong_thuc, trang_thai) VALUES (?, ?, ?, ?, ?, ?)",
+            [ma_tt, ma_hd, ngay_thanh_toan, so_tien, phuong_thuc, trang_thai]
+        );
+        res.json({ success: true, message: "Đã ghi nhận khoản thanh toán!" });
+    } catch (err) { 
+        res.status(500).json({ error: err.message }); 
+    }
+});
+// ==========================================
 // 4. CHẠY SERVER
 // ==========================================
 const PORT = process.env.PORT || 10000;
