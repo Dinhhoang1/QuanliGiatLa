@@ -93,6 +93,7 @@
                     <th>Dịch Vụ Đã Đặt</th>
                     <th>Tiền</th>
                     <th>Trạng Thái</th>
+                    <th>Thanh Toán</th>
                     <th>Chi Tiết</th>
                 </tr>
             </thead>
@@ -167,6 +168,42 @@
     </div>
 </div>
 
+<div id="modalThanhToan" class="modal">
+    <div class="modal-content" style="width: 60%;">
+        <h3>Quản Lý Thanh Toán - Hóa Đơn: <span id="ttMaHD" style="color: #2980b9;"></span></h3>
+        
+        <div style="background: #fdf2e9; padding: 15px; border-radius: 5px; margin-bottom: 15px; display: flex; justify-content: space-between; font-size: 16px;">
+            <div><strong>Tổng tiền HĐ:</strong> <span id="ttTongTien" style="color: #2c3e50; font-weight: bold;">0</span> đ</div>
+            <div><strong>Đã trả:</strong> <span id="ttDaTra" style="color: #27ae60; font-weight: bold;">0</span> đ</div>
+            <div><strong>CÒN NỢ:</strong> <span id="ttConNo" style="color: #c0392b; font-weight: bold; font-size: 18px;">0</span> đ</div>
+        </div>
+
+        <div style="background: #e8f4f8; padding: 15px; border-radius: 5px; display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+            <input type="number" id="tienThanhToan" placeholder="Nhập số tiền khách đưa..." style="flex: 2; border: 2px solid #3498db; font-weight:bold;">
+            <select id="phuongThucTT" style="flex: 1; border: 2px solid #3498db;">
+                <option value="Tiền mặt">Tiền mặt</option>
+                <option value="Chuyển khoản">Chuyển khoản</option>
+                <option value="Quẹt thẻ">Quẹt thẻ</option>
+            </select>
+            <select id="trangThaiTT" style="flex: 1; border: 2px solid #3498db;">
+                <option value="Đã thanh toán">Đã thanh toán đủ</option>
+                <option value="Chưa đủ">Chưa đủ (Đặt cọc)</option>
+            </select>
+            <button onclick="ghiNhanThanhToan()" style="background: #2ecc71; padding: 10px 20px;">+ Ghi nhận</button>
+        </div>
+
+        <h4>Lịch sử trả tiền của đơn này:</h4>
+        <table id="tableLichSuTT">
+            <thead><tr><th>Mã GD</th><th>Ngày Trả</th><th>Số Tiền</th><th>Phương Thức</th><th>Ghi Chú</th></tr></thead>
+            <tbody id="bodyLichSuTT"></tbody>
+        </table>
+        
+        <div style="text-align: right; margin-top: 20px;">
+            <button onclick="document.getElementById('modalThanhToan').style.display='none'" style="background: #e74c3c; padding: 10px 20px;">Đóng</button>
+        </div>
+    </div>
+</div>
+
 <div id="modal" class="modal">
     <div class="modal-content">
         <h3>Chi Tiết Dịch Vụ - <span id="modalID"></span></h3>
@@ -212,6 +249,10 @@
     let tongChuaGiam = 0;
     
     let dsHoaDonGoc = []; 
+    
+    // BIẾN TOÀN CỤC CHO PHẦN THANH TOÁN
+    let currentThanhToanHD = '';
+    let currentThanhToanTong = 0;
 
     const tomorrow = new Date(); 
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -241,11 +282,7 @@
 
     async function init() {
         const [resDV, resNV, resLK, resKH, resGG] = await Promise.all([
-            fetch(API+'/dichvu'), 
-            fetch(API+'/nhanvien'), 
-            fetch(API+'/loaikhach'), 
-            fetch(API+'/khachhang'), 
-            fetch(API+'/giamgia')
+            fetch(API+'/dichvu'), fetch(API+'/nhanvien'), fetch(API+'/loaikhach'), fetch(API+'/khachhang'), fetch(API+'/giamgia')
         ]);
         dsDichVu = await resDV.json();
         dsKhach = await resKH.json();
@@ -349,7 +386,7 @@
     }
 
     async function loadHoaDon() {
-        const res = await fetch(API+'/hoadon?t=' + new Date().getTime()); // Chống lưu cache
+        const res = await fetch(API+'/hoadon?t=' + new Date().getTime()); 
         const ds = await res.json();
         
         dsHoaDonGoc = ds;
@@ -376,6 +413,7 @@
                         <option ${h.trang_thai==='Đã trả khách'?'selected':''}>Đã trả khách</option>
                     </select>
                 </td>
+                <td><button onclick="moModalThanhToan('${h.ma_hd}', ${h.thanh_tien})" style="background: #f39c12; padding:5px 10px; border-radius:3px; color: white; cursor:pointer; border:none;" ${!h.ma_hd ? 'disabled':''}>💳 Thanh toán</button></td>
                 <td><button onclick="viewDetail('${h.ma_hd}')" ${!h.ma_hd ? 'disabled':''}>👁️</button></td>
             </tr>`;
         }).join('');
@@ -404,38 +442,103 @@
     }
 
     // =========================================================
-    // ĐÃ SỬA: HÀM IN HÓA ĐƠN CHỐNG ĐỨNG HÌNH TRÌNH DUYỆT
+    // ĐÃ THÊM: CÁC HÀM XỬ LÝ THANH TOÁN HÓA ĐƠN
     // =========================================================
+    async function moModalThanhToan(ma_hd, tong_tien) {
+        currentThanhToanHD = ma_hd;
+        currentThanhToanTong = tong_tien || 0;
+        
+        document.getElementById('ttMaHD').innerText = ma_hd;
+        document.getElementById('ttTongTien').innerText = Number(tong_tien).toLocaleString('vi-VN');
+        document.getElementById('tienThanhToan').value = '';
+        
+        document.getElementById('modalThanhToan').style.display = 'block';
+        await loadLichSuThanhToan();
+    }
+
+    async function loadLichSuThanhToan() {
+        document.getElementById('bodyLichSuTT').innerHTML = '<tr><td colspan="5" style="text-align:center;">Đang tải...</td></tr>';
+        try {
+            const res = await fetch(`${API}/hoadon/${currentThanhToanHD}/thanhtoan`);
+            const data = await res.json();
+            
+            let daTra = 0;
+            let html = '';
+            if (data.length === 0) {
+                html = '<tr><td colspan="5" style="text-align:center; color: gray;">Khách chưa thanh toán khoản nào.</td></tr>';
+            } else {
+                html = data.map(t => {
+                    daTra += Number(t.so_tien);
+                    return `<tr>
+                        <td>${t.ma_tt}</td>
+                        <td>${new Date(t.ngay_thanh_toan).toLocaleDateString('vi-VN')}</td>
+                        <td style="color:#27ae60; font-weight:bold;">+ ${Number(t.so_tien).toLocaleString('vi-VN')} đ</td>
+                        <td>${t.phuong_thuc}</td>
+                        <td><span style="background: ${t.trang_thai === 'Chưa đủ' ? '#f39c12' : '#2ecc71'}; padding: 2px 8px; border-radius: 10px; color: white; font-size: 12px;">${t.trang_thai}</span></td>
+                    </tr>`;
+                }).join('');
+            }
+            
+            document.getElementById('bodyLichSuTT').innerHTML = html;
+            document.getElementById('ttDaTra').innerText = daTra.toLocaleString('vi-VN');
+            
+            let conNo = currentThanhToanTong - daTra;
+            document.getElementById('ttConNo').innerText = Math.max(0, conNo).toLocaleString('vi-VN');
+            
+            // Gợi ý số tiền còn nợ vào ô nhập luôn cho tiện
+            document.getElementById('tienThanhToan').value = conNo > 0 ? conNo : 0;
+            
+        } catch (err) {
+            document.getElementById('bodyLichSuTT').innerHTML = '<tr><td colspan="5" style="color:red; text-align:center;">Lỗi tải dữ liệu. Cần cập nhật server.js!</td></tr>';
+        }
+    }
+
+    async function ghiNhanThanhToan() {
+        const so_tien = document.getElementById('tienThanhToan').value;
+        const phuong_thuc = document.getElementById('phuongThucTT').value;
+        const trang_thai = document.getElementById('trangThaiTT').value;
+
+        if (!so_tien || so_tien <= 0) return alert("Vui lòng nhập số tiền hợp lệ!");
+
+        try {
+            const res = await fetch(API+'/thanhtoan', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    ma_hd: currentThanhToanHD,
+                    so_tien: so_tien,
+                    phuong_thuc: phuong_thuc,
+                    trang_thai: trang_thai
+                })
+            });
+            const data = await res.json();
+            if(data.error) throw new Error(data.error);
+            
+            alert("Đã thu tiền thành công!");
+            loadLichSuThanhToan(); // Cập nhật lại ngay lập tức
+        } catch (err) {
+            alert("Lỗi: " + err.message);
+        }
+    }
+
     async function inHoaDon() {
         const ma_hd = document.getElementById('modalID').innerText;
         const hd = dsHoaDonGoc.find(x => x.ma_hd === ma_hd);
         if (!hd) return alert("Không tìm thấy thông tin hóa đơn!");
 
         try {
-            // 1. BẮT BUỘC ĐỢI GỬI LỆNH LÊN AIVEN XONG XUÔI MỚI CHẠY TIẾP
             await fetch(`${API}/hoadon/${ma_hd}`, { 
-                method: 'PUT', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ trang_thai: 'Hoàn thành' }) 
+                method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ trang_thai: 'Hoàn thành' }) 
             });
-
-            // 2. Ép giao diện bên ngoài đổi thành "Hoàn thành" 
             hd.trang_thai = 'Hoàn thành';
             const selectBox = document.getElementById('status-' + ma_hd);
             if (selectBox) selectBox.value = 'Hoàn thành';
-
-            // 3. Tải lại ngầm cái bảng để chắc chắn nó ăn vào Database
             await loadHoaDon();
+        } catch(e) { console.log("Lỗi cập nhật trạng thái:", e); }
 
-        } catch(e) {
-            console.log("Lỗi cập nhật trạng thái:", e);
-        }
-
-        // 4. Lấy dữ liệu chi tiết
         const res = await fetch(`${API}/hoadon/${ma_hd}/chitiet`);
         const chiTiet = await res.json();
 
-        // 5. SAU KHI ĐÃ LƯU XONG, BÂY GIỜ MỚI MỞ MÁY IN
         let printWin = window.open('', '', 'width=800,height=600');
         printWin.document.write(`
             <html>
@@ -506,8 +609,6 @@
         `);
         printWin.document.close();
         printWin.focus();
-        
-        // Đợi 0.5s cho web in load xong CSS rồi gọi hộp thoại In (Đóng băng trình duyệt)
         setTimeout(() => { printWin.print(); }, 500);
     }
 
