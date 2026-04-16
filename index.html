@@ -136,9 +136,19 @@
     </div>
 
     <div id="tab-nhan-vien" class="card manager-only">
-        <h2>Danh Sách Nhân Viên</h2>
+        <h2>👨‍💼 Quản Lý Nhân Sự</h2>
+        <div style="background: #e8f4f8; padding: 15px; border-radius: 5px; display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
+            <input type="text" id="tenNVMoi" placeholder="Họ Tên Nhân Viên" style="flex: 2; border: 2px solid #3498db;">
+            <input type="text" id="sdtNVMoi" placeholder="Số điện thoại" style="flex: 1; border: 2px solid #3498db;">
+            <select id="chucVuNVMoi" style="flex: 1; border: 2px solid #3498db;">
+                <option value="Nhân viên">Nhân viên</option>
+                <option value="Quản lý">Quản lý</option>
+            </select>
+            <input type="number" id="luongNVMoi" placeholder="Lương (VNĐ)" style="flex: 1; border: 2px solid #3498db;">
+            <button onclick="themNhanVienMoi()" style="background: #2ecc71;">+ Thêm Nhân Viên</button>
+        </div>
         <table id="tableNV">
-            <thead><tr><th>Mã NV</th><th>Họ Tên</th><th>SĐT</th><th>Chức Vụ</th><th>Lương</th></tr></thead>
+            <thead><tr><th>Mã NV</th><th>Họ Tên</th><th>SĐT</th><th>Chức Vụ</th><th>Lương Cơ Bản</th><th>Hành Động</th></tr></thead>
             <tbody></tbody>
         </table>
     </div>
@@ -201,7 +211,6 @@
     let dsLoaiKhach = []; 
     let tongChuaGiam = 0;
     
-    // ĐÃ THÊM: Biến lưu trữ danh sách hóa đơn gốc để lấy dữ liệu lúc In Hóa Đơn
     let dsHoaDonGoc = []; 
 
     const tomorrow = new Date(); 
@@ -343,7 +352,6 @@
         const res = await fetch(API+'/hoadon'); 
         const ds = await res.json();
         
-        // Lưu trữ lại mảng Hóa Đơn gốc để dùng cho chức năng In Hóa Đơn
         dsHoaDonGoc = ds;
 
         const detailPromises = ds.map(h => h.ma_hd ? fetch(`${API}/hoadon/${h.ma_hd}/chitiet`).then(r => r.json()) : Promise.resolve([]));
@@ -395,21 +403,14 @@
         document.getElementById('modal').style.display='block';
     }
 
-    // =========================================================
-    // ĐÃ THÊM: HÀM IN / XUẤT HÓA ĐƠN
-    // =========================================================
     async function inHoaDon() {
         const ma_hd = document.getElementById('modalID').innerText;
-        
-        // Tìm thông tin Hóa Đơn chung từ mảng gốc
         const hd = dsHoaDonGoc.find(x => x.ma_hd === ma_hd);
         if (!hd) return alert("Không tìm thấy thông tin hóa đơn!");
 
-        // Gọi API lấy danh sách dịch vụ chi tiết
         const res = await fetch(`${API}/hoadon/${ma_hd}/chitiet`);
         const chiTiet = await res.json();
 
-        // Mở một cửa sổ trình duyệt nhỏ để in
         let printWin = window.open('', '', 'width=800,height=600');
         printWin.document.write(`
             <html>
@@ -478,14 +479,9 @@
             </body>
             </html>
         `);
-        
         printWin.document.close();
         printWin.focus();
-        
-        // Gọi lệnh máy in tự động (Chờ 0.5s để web kịp load font/css)
-        setTimeout(() => {
-            printWin.print();
-        }, 500);
+        setTimeout(() => { printWin.print(); }, 500);
     }
 
     async function loadKhachHang() {
@@ -574,7 +570,67 @@
     
     async function xoaGG(id) { if(confirm('Xóa mã này?')) { await fetch(API+'/giamgia/'+id, {method:'DELETE'}); loadGiamGia(); init(); } }
 
-    async function loadNhanVien() { const res = await fetch(API+'/nhanvien'); const ds = await res.json(); document.querySelector('#tableNV tbody').innerHTML = ds.map(n => `<tr><td>${n.ma_nv}</td><td>${n.ten_nv}</td><td>${n.sdt}</td><td>${n.chuc_vu}</td><td>${Number(n.luong).toLocaleString()}đ</td></tr>`).join(''); }
+    // =========================================================
+    // ĐÃ THÊM: HÀM QUẢN LÝ NHÂN VIÊN
+    // =========================================================
+    async function loadNhanVien() { 
+        const res = await fetch(API+'/nhanvien'); 
+        const ds = await res.json(); 
+        
+        document.querySelector('#tableNV tbody').innerHTML = ds.map(n => `<tr>
+            <td>${n.ma_nv}</td>
+            <td><b>${n.ten_nv}</b></td>
+            <td>${n.sdt}</td>
+            <td>
+                <span style="background: ${n.chuc_vu === 'Quản lý' ? '#e74c3c' : '#2ecc71'}; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;">
+                    ${n.chuc_vu}
+                </span>
+            </td>
+            <td style="font-weight:bold; color:#2980b9;">${Number(n.luong).toLocaleString('vi-VN')}đ</td>
+            <td><button onclick="xoaNhanVien('${n.ma_nv}')" style="background:#e74c3c; padding:5px 10px; border-radius:3px; color: white; cursor:pointer; border:none;">Xóa</button></td>
+        </tr>`).join(''); 
+    }
+
+    async function themNhanVienMoi() {
+        const ten_nv = document.getElementById('tenNVMoi').value;
+        const sdt = document.getElementById('sdtNVMoi').value;
+        const chuc_vu = document.getElementById('chucVuNVMoi').value;
+        const luong = document.getElementById('luongNVMoi').value;
+
+        if (!ten_nv || !sdt || !luong) return alert("Vui lòng nhập đủ thông tin nhân viên!");
+
+        try {
+            const res = await fetch(API+'/nhanvien', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ ten_nv, sdt, chuc_vu, luong }) 
+            });
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+            
+            alert(data.message || "Đã thêm nhân viên thành công!");
+            document.getElementById('tenNVMoi').value = '';
+            document.getElementById('sdtNVMoi').value = '';
+            document.getElementById('luongNVMoi').value = '';
+            
+            loadNhanVien(); 
+            init(); // Cập nhật lại Dropdown nhân viên ở tab Lập đơn
+        } catch (err) { alert("Lỗi: " + err.message); }
+    }
+
+    async function xoaNhanVien(id) {
+        if (!confirm("Bạn có chắc chắn muốn xóa nhân viên này?")) return;
+        try {
+            const res = await fetch(API+'/nhanvien/' + id, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+            
+            alert(data.message || "Đã xóa nhân viên!"); 
+            loadNhanVien(); 
+            init();
+        } catch (err) { alert(err.message); }
+    }
+
     async function loadLoaiKhach() { const res = await fetch(API+'/loaikhach'); const ds = await res.json(); document.querySelector('#tableLK tbody').innerHTML = ds.map(l => `<tr><td>${l.ma_loai}</td><td>${l.ten_loai}</td><td>${l.mo_ta}</td></tr>`).join(''); }
     
     async function loadDichVu() { 
