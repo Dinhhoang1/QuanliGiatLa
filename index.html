@@ -403,6 +403,9 @@
         document.getElementById('modal').style.display='block';
     }
 
+    // =========================================================
+    // HÀM IN HÓA ĐƠN & TỰ ĐỘNG CẬP NHẬT TRẠNG THÁI
+    // =========================================================
     async function inHoaDon() {
         const ma_hd = document.getElementById('modalID').innerText;
         const hd = dsHoaDonGoc.find(x => x.ma_hd === ma_hd);
@@ -481,7 +484,22 @@
         `);
         printWin.document.close();
         printWin.focus();
+        
+        // Mở hộp thoại in
         setTimeout(() => { printWin.print(); }, 500);
+
+        // Tự động gọi API cập nhật trạng thái thành "Hoàn thành"
+        try {
+            await fetch(`${API}/hoadon/${ma_hd}`, { 
+                method: 'PUT', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ trang_thai: 'Hoàn thành' }) 
+            });
+            loadHoaDon(); 
+            loadKhachHang(); 
+        } catch(e) {
+            console.log("Lỗi cập nhật trạng thái tự động:", e);
+        }
     }
 
     async function loadKhachHang() {
@@ -561,22 +579,27 @@
 
     async function themGiamGiaMoi() {
         const body = {
-            ten_chuong_trinh: document.getElementById('tenGG').value, phan_tram: document.getElementById('ptGG').value,
-            dieu_kien: document.getElementById('dkGG').value, ngay_bat_dau: document.getElementById('bdGG').value, ngay_ket_thuc: document.getElementById('ktGG').value
+            ten_chuong_trinh: document.getElementById('tenGG').value, 
+            phan_tram: document.getElementById('ptGG').value,
+            dieu_kien: document.getElementById('dkGG').value, 
+            ngay_bat_dau: document.getElementById('bdGG').value, 
+            ngay_ket_thuc: document.getElementById('ktGG').value
         };
-        await fetch(API+'/giamgia', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+        await fetch(API+'/giamgia', { 
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) 
+        });
         alert("Đã thêm mã!"); loadGiamGia(); init(); 
     }
     
-    async function xoaGG(id) { if(confirm('Xóa mã này?')) { await fetch(API+'/giamgia/'+id, {method:'DELETE'}); loadGiamGia(); init(); } }
+    async function xoaGG(id) { 
+        if(confirm('Xóa mã này?')) { 
+            await fetch(API+'/giamgia/'+id, {method:'DELETE'}); 
+            loadGiamGia(); init(); 
+        } 
+    }
 
-    // =========================================================
-    // ĐÃ THÊM: HÀM QUẢN LÝ NHÂN VIÊN
-    // =========================================================
     async function loadNhanVien() { 
-        const res = await fetch(API+'/nhanvien'); 
-        const ds = await res.json(); 
-        
+        const res = await fetch(API+'/nhanvien'); const ds = await res.json(); 
         document.querySelector('#tableNV tbody').innerHTML = ds.map(n => `<tr>
             <td>${n.ma_nv}</td>
             <td><b>${n.ten_nv}</b></td>
@@ -601,9 +624,7 @@
 
         try {
             const res = await fetch(API+'/nhanvien', { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ ten_nv, sdt, chuc_vu, luong }) 
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ten_nv, sdt, chuc_vu, luong }) 
             });
             const data = await res.json();
             if (data.error) throw new Error(data.error);
@@ -613,8 +634,7 @@
             document.getElementById('sdtNVMoi').value = '';
             document.getElementById('luongNVMoi').value = '';
             
-            loadNhanVien(); 
-            init(); // Cập nhật lại Dropdown nhân viên ở tab Lập đơn
+            loadNhanVien(); init();
         } catch (err) { alert("Lỗi: " + err.message); }
     }
 
@@ -624,10 +644,8 @@
             const res = await fetch(API+'/nhanvien/' + id, { method: 'DELETE' });
             const data = await res.json();
             if (data.error) throw new Error(data.error);
-            
             alert(data.message || "Đã xóa nhân viên!"); 
-            loadNhanVien(); 
-            init();
+            loadNhanVien(); init();
         } catch (err) { alert(err.message); }
     }
 
