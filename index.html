@@ -349,7 +349,7 @@
     }
 
     async function loadHoaDon() {
-        const res = await fetch(API+'/hoadon'); 
+        const res = await fetch(API+'/hoadon?t=' + new Date().getTime()); // Chống lưu cache
         const ds = await res.json();
         
         dsHoaDonGoc = ds;
@@ -404,35 +404,38 @@
     }
 
     // =========================================================
-    // ĐÃ SỬA: HÀM IN HÓA ĐƠN KÈM THEO CẬP NHẬT TRẠNG THÁI TỨC THÌ
+    // ĐÃ SỬA: HÀM IN HÓA ĐƠN CHỐNG ĐỨNG HÌNH TRÌNH DUYỆT
     // =========================================================
     async function inHoaDon() {
         const ma_hd = document.getElementById('modalID').innerText;
         const hd = dsHoaDonGoc.find(x => x.ma_hd === ma_hd);
         if (!hd) return alert("Không tìm thấy thông tin hóa đơn!");
 
-        // 1. Ép giao diện bên ngoài đổi thành "Hoàn thành" ngay lập tức (Chống giật/lag)
-        hd.trang_thai = 'Hoàn thành'; 
-        const selectBox = document.getElementById('status-' + ma_hd);
-        if (selectBox) selectBox.value = 'Hoàn thành';
+        try {
+            // 1. BẮT BUỘC ĐỢI GỬI LỆNH LÊN AIVEN XONG XUÔI MỚI CHẠY TIẾP
+            await fetch(`${API}/hoadon/${ma_hd}`, { 
+                method: 'PUT', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ trang_thai: 'Hoàn thành' }) 
+            });
 
-        // 2. Lặng lẽ gửi thông tin lên két sắt Aiven
-        fetch(`${API}/hoadon/${ma_hd}`, { 
-            method: 'PUT', 
-            headers: {'Content-Type': 'application/json'}, 
-            body: JSON.stringify({ trang_thai: 'Hoàn thành' }) 
-        }).then(() => {
-            // Chờ Aiven tiêu hóa dữ liệu nửa giây rồi mới tải lại các bảng để chắc ăn
-            setTimeout(() => {
-                loadHoaDon();
-                loadKhachHang();
-            }, 500);
-        });
+            // 2. Ép giao diện bên ngoài đổi thành "Hoàn thành" 
+            hd.trang_thai = 'Hoàn thành';
+            const selectBox = document.getElementById('status-' + ma_hd);
+            if (selectBox) selectBox.value = 'Hoàn thành';
 
-        // 3. Bật tờ Hóa Đơn và mở máy in
+            // 3. Tải lại ngầm cái bảng để chắc chắn nó ăn vào Database
+            await loadHoaDon();
+
+        } catch(e) {
+            console.log("Lỗi cập nhật trạng thái:", e);
+        }
+
+        // 4. Lấy dữ liệu chi tiết
         const res = await fetch(`${API}/hoadon/${ma_hd}/chitiet`);
         const chiTiet = await res.json();
 
+        // 5. SAU KHI ĐÃ LƯU XONG, BÂY GIỜ MỚI MỞ MÁY IN
         let printWin = window.open('', '', 'width=800,height=600');
         printWin.document.write(`
             <html>
@@ -503,6 +506,8 @@
         `);
         printWin.document.close();
         printWin.focus();
+        
+        // Đợi 0.5s cho web in load xong CSS rồi gọi hộp thoại In (Đóng băng trình duyệt)
         setTimeout(() => { printWin.print(); }, 500);
     }
 
