@@ -241,7 +241,11 @@
 
     async function init() {
         const [resDV, resNV, resLK, resKH, resGG] = await Promise.all([
-            fetch(API+'/dichvu'), fetch(API+'/nhanvien'), fetch(API+'/loaikhach'), fetch(API+'/khachhang'), fetch(API+'/giamgia')
+            fetch(API+'/dichvu'), 
+            fetch(API+'/nhanvien'), 
+            fetch(API+'/loaikhach'), 
+            fetch(API+'/khachhang'), 
+            fetch(API+'/giamgia')
         ]);
         dsDichVu = await resDV.json();
         dsKhach = await resKH.json();
@@ -347,6 +351,7 @@
     async function loadHoaDon() {
         const res = await fetch(API+'/hoadon'); 
         const ds = await res.json();
+        
         dsHoaDonGoc = ds;
 
         const detailPromises = ds.map(h => h.ma_hd ? fetch(`${API}/hoadon/${h.ma_hd}/chitiet`).then(r => r.json()) : Promise.resolve([]));
@@ -364,7 +369,7 @@
                 <td style="font-size:13px; color:#2c3e50; line-height: 1.6;">${dvString}</td>
                 <td style="color:red;font-weight:bold;">${Number(h.thanh_tien || 0).toLocaleString('vi-VN')}đ</td>
                 <td>
-                    <select onchange="updateStatus('${h.ma_hd}', this.value)" style="padding:4px; border: 1px solid #bdc3c7;">
+                    <select id="status-${h.ma_hd}" onchange="updateStatus('${h.ma_hd}', this.value)" style="padding:4px; border: 1px solid #bdc3c7;">
                         <option ${h.trang_thai==='Đã nhận' || h.trang_thai==='Chờ xử lý'?'selected':''}>Chờ xử lý</option>
                         <option ${h.trang_thai==='Đang xử lý'?'selected':''}>Đang xử lý</option>
                         <option ${h.trang_thai==='Hoàn thành'?'selected':''}>Hoàn thành</option>
@@ -398,23 +403,33 @@
         document.getElementById('modal').style.display='block';
     }
 
+    // =========================================================
+    // ĐÃ SỬA: HÀM IN HÓA ĐƠN KÈM THEO CẬP NHẬT TRẠNG THÁI TỨC THÌ
+    // =========================================================
     async function inHoaDon() {
         const ma_hd = document.getElementById('modalID').innerText;
         const hd = dsHoaDonGoc.find(x => x.ma_hd === ma_hd);
         if (!hd) return alert("Không tìm thấy thông tin hóa đơn!");
 
-        // GỬI LỆNH UPDATE TRẠNG THÁI LÊN SERVER TRƯỚC TIÊN
-        try {
-            await fetch(`${API}/hoadon/${ma_hd}`, { 
-                method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ trang_thai: 'Hoàn thành' }) 
-            });
-            // Cập nhật biến tạm để in ra giấy cho chuẩn
-            hd.trang_thai = 'Hoàn thành';
-            // Cập nhật UI bảng bên dưới
-            loadHoaDon(); 
-            loadKhachHang(); 
-        } catch(e) { console.log("Lỗi cập nhật trạng thái:", e); }
+        // 1. Ép giao diện bên ngoài đổi thành "Hoàn thành" ngay lập tức (Chống giật/lag)
+        hd.trang_thai = 'Hoàn thành'; 
+        const selectBox = document.getElementById('status-' + ma_hd);
+        if (selectBox) selectBox.value = 'Hoàn thành';
 
+        // 2. Lặng lẽ gửi thông tin lên két sắt Aiven
+        fetch(`${API}/hoadon/${ma_hd}`, { 
+            method: 'PUT', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify({ trang_thai: 'Hoàn thành' }) 
+        }).then(() => {
+            // Chờ Aiven tiêu hóa dữ liệu nửa giây rồi mới tải lại các bảng để chắc ăn
+            setTimeout(() => {
+                loadHoaDon();
+                loadKhachHang();
+            }, 500);
+        });
+
+        // 3. Bật tờ Hóa Đơn và mở máy in
         const res = await fetch(`${API}/hoadon/${ma_hd}/chitiet`);
         const chiTiet = await res.json();
 
