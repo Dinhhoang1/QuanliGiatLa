@@ -318,6 +318,33 @@ app.put('/api/khachhang/:id', async (req, res) => {
     }
 });
 // ==========================================
+// API: QUẢN LÝ NHÂN VIÊN
+// ==========================================
+app.post('/api/nhanvien', async (req, res) => {
+    const { ten_nv, sdt, chuc_vu, luong } = req.body;
+    if (!ten_nv || !sdt || !luong) return res.status(400).json({ error: "Vui lòng nhập đủ thông tin!" });
+    
+    try {
+        const ma_nv = generateID('NV'); 
+        await pool.query(
+            "INSERT INTO nhan_vien (ma_nv, ten_nv, sdt, chuc_vu, luong) VALUES (?, ?, ?, ?, ?)",
+            [ma_nv, ten_nv, sdt, chuc_vu, luong]
+        );
+        res.json({ success: true, message: "Đã thêm nhân viên mới thành công!" });
+    } catch (err) { 
+        res.status(500).json({ error: err.message }); 
+    }
+});
+
+app.delete('/api/nhanvien/:id', async (req, res) => {
+    try {
+        await pool.query("DELETE FROM nhan_vien WHERE ma_nv = ?", [req.params.id]);
+        res.json({ success: true, message: "Đã xóa nhân viên khỏi hệ thống!" });
+    } catch (err) { 
+        res.status(500).json({ error: "Không thể xóa nhân viên này vì họ đã từng tạo hóa đơn (Vướng khóa ngoại)!" }); 
+    }
+});
+// ==========================================
 // 4. CHẠY SERVER
 // ==========================================
 const PORT = process.env.PORT || 10000;
