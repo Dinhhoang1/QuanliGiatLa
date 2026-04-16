@@ -208,6 +208,9 @@ app.post('/api/hoadon', async (req, res) => {
 // ==========================================
 // [ĐÃ NÂNG CẤP]: LẤY DANH SÁCH HÓA ĐƠN 
 // ==========================================
+// ==========================================
+// [ĐÃ NÂNG CẤP]: LẤY DANH SÁCH HÓA ĐƠN (Thêm Mã NV)
+// ==========================================
 app.get('/api/hoadon', async (req, res) => {
     try {
         const [rows] = await pool.query(`
@@ -218,10 +221,13 @@ app.get('/api/hoadon', async (req, res) => {
                 d.ngay_nhan, 
                 d.ngay_hen, 
                 h.thanh_tien, 
-                h.trang_thai 
+                h.trang_thai,
+                d.ma_nv,
+                n.ten_nv
             FROM don_dat d
             JOIN hoa_don h ON d.ma_dd = h.ma_dd
             JOIN khach_hang k ON d.ma_kh = k.ma_kh
+            LEFT JOIN nhan_vien n ON d.ma_nv = n.ma_nv
             ORDER BY d.ngay_nhan DESC
         `);
         res.json(rows);
