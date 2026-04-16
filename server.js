@@ -205,7 +205,9 @@ app.post('/api/hoadon', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// API Lấy danh sách (Lấy từ bảng don_dat làm gốc, nối sang hoa_don để lấy tổng tiền)
+// ==========================================
+// [ĐÃ NÂNG CẤP]: LẤY DANH SÁCH HÓA ĐƠN 
+// ==========================================
 app.get('/api/hoadon', async (req, res) => {
     try {
         const [rows] = await pool.query(`
@@ -216,24 +218,45 @@ app.get('/api/hoadon', async (req, res) => {
                 d.ngay_nhan, 
                 d.ngay_hen, 
                 h.thanh_tien, 
-                d.trang_thai 
+                h.trang_thai 
             FROM don_dat d
-            LEFT JOIN hoa_don h ON d.ma_dd = h.ma_dd
-            LEFT JOIN khach_hang k ON d.ma_kh = k.ma_kh
+            JOIN hoa_don h ON d.ma_dd = h.ma_dd
+            JOIN khach_hang k ON d.ma_kh = k.ma_kh
             ORDER BY d.ngay_nhan DESC
         `);
         res.json(rows);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// API Cập nhật trạng thái (Cập nhật trực tiếp vào bảng don_dat)
+// ==========================================
+// [ĐÃ NÂNG CẤP]: CẬP NHẬT TRẠNG THÁI (ĐỒNG BỘ 2 BẢNG)
+// ==========================================
 app.put('/api/hoadon/:id', async (req, res) => {
     const { trang_thai } = req.body;
+    const ma_hd = req.params.id; // Bây giờ web truyền mã HĐ (VD: HD1234) chứ không truyền mã ĐĐ nữa
+    
+    // Dùng Transaction để cập nhật cả 2 bảng. Lỗi 1 cái là hủy luôn để không bị lệch
+    const connection = await pool.getConnection();
     try {
-        // req.params.id lúc này sẽ là ma_dd được gửi từ frontend
-        await pool.query("UPDATE don_dat SET trang_thai = ? WHERE ma_dd = ?", [trang_thai, req.params.id]);
-        res.json({ success: true, message: "Đã cập nhật trạng thái đơn đặt!" });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+        await connection.beginTransaction();
+        
+        // Bước 1: Cập nhật trạng thái bảng Hóa Đơn
+        await connection.query("UPDATE hoa_don SET trang_thai = ? WHERE ma_hd = ?", [trang_thai, ma_hd]);
+        
+        // Bước 2: Tìm mã Đơn Đặt tương ứng và Cập nhật luôn bảng Đơn Đặt
+        const [rows] = await connection.query("SELECT ma_dd FROM hoa_don WHERE ma_hd = ?", [ma_hd]);
+        if (rows.length > 0) {
+            await connection.query("UPDATE don_dat SET trang_thai = ? WHERE ma_dd = ?", [trang_thai, rows[0].ma_dd]);
+        }
+        
+        await connection.commit();
+        res.json({ success: true, message: "Đã đồng bộ trạng thái 2 bảng!" });
+    } catch (err) {
+        await connection.rollback();
+        res.status(500).json({ error: err.message });
+    } finally {
+        connection.release();
+    }
 });
 
 // API Xem Chi Tiết Hóa Đơn (Cho Modal popup)
