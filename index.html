@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Laundry Management</title>
+    <title>GIẶT LÀ PRO - Quản lý 9 bảng</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; margin: 0; height: 100vh; }
         .sidebar { width: 250px; background: #1c2a38; color: white; padding: 20px; }
@@ -331,9 +331,6 @@
         tinhTongTien();
     }
 
-    // ====================================================================
-    // ĐÃ NÂNG CẤP: KIỂM TRA ĐIỀU KIỆN TỔNG TIỀN TRƯỚC KHI HIỆN MÃ GIẢM GIÁ
-    // ====================================================================
     function capNhatDropdownGiamGia() {
         const selectGG = document.getElementById('ggSelect'); 
         const maDangChon = selectGG.value;
@@ -343,15 +340,12 @@
         let opt = '<option value="0" data-phantram="0">Không dùng giảm giá</option>';
         
         dsGiamGia.forEach(gg => {
-            // Tách dữ liệu gộp để lấy Đối tượng và Đơn tối thiểu
             let parts = (gg.dieu_kien || "").split('|');
             let doiTuong = parts[0] || "";
             let toiThieu = parts.length > 1 ? Number(parts[1]) : 0;
 
             let laMaVIP = doiTuong.toLowerCase().includes('vip');
             let khachLaVIP = loaiKhachText.toLowerCase().includes('vip');
-            
-            // ĐIỀU KIỆN CHỐNG LỖI MỚI: Khách phải mua đủ số tiền tối thiểu mới được thấy mã
             let duTien = tongChuaGiam >= toiThieu;
 
             if ((!laMaVIP || (laMaVIP && khachLaVIP)) && duTien) {
@@ -528,6 +522,9 @@
         }
     }
 
+    // =========================================================
+    // IN HÓA ĐƠN KÈM MÃ GIẢM GIÁ (ĐÃ ĐƯỢC CHUẨN HÓA LẠI)
+    // =========================================================
     async function inHoaDon() {
         const ma_hd = document.getElementById('modalID').innerText;
         const hd = dsHoaDonGoc.find(x => x.ma_hd === ma_hd);
@@ -548,6 +545,24 @@
         const res = await fetch(`${API}/hoadon/${ma_hd}/chitiet`);
         const chiTiet = await res.json();
 
+        // Tính toán lại tổng tiền trước khi giảm
+        const tongTienGoc = chiTiet.reduce((sum, c) => sum + (c.so_luong * c.don_gia), 0);
+        let giamGiaHTML = '';
+        
+        // Nếu có mã giảm giá thì in ra tên mã và số tiền được trừ
+        if (hd.ma_gg) {
+            const ggInfo = dsGiamGia.find(g => g.ma_gg === hd.ma_gg);
+            const tenGG = ggInfo ? ggInfo.ten_chuong_trinh : hd.ma_gg;
+            const tienGiam = tongTienGoc - Number(hd.thanh_tien || 0);
+            
+            giamGiaHTML = `
+                <div style="display: flex; justify-content: space-between; font-size: 16px; margin-top: 5px; color: #e67e22;">
+                    <span>Khuyến mãi (${tenGG}):</span>
+                    <span>- ${tienGiam.toLocaleString('vi-VN')} VNĐ</span>
+                </div>
+            `;
+        }
+
         let printWin = window.open('', '', 'width=800,height=600');
         printWin.document.write(`
             <html>
@@ -561,7 +576,8 @@
                     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
                     th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
                     th { background: #f4f6f9; color: #2c3e50; }
-                    .total { text-align: right; margin-top: 20px; font-size: 20px; font-weight: bold; color: #c0392b; }
+                    .total { margin-top: 20px; text-align: right; width: 100%; }
+                    .total-box { display: inline-block; text-align: left; min-width: 300px; }
                     .footer { text-align: center; margin-top: 50px; font-style: italic; color: #7f8c8d; }
                 </style>
             </head>
@@ -576,7 +592,7 @@
                         <p><strong>Khách hàng:</strong> ${hd.ten_kh || 'Khách lẻ'}</p>
                         <p><strong>Mã Hóa Đơn:</strong> ${hd.ma_hd}</p>
                         <p><strong>Mã Đơn Đặt:</strong> ${hd.ma_dd}</p>
-                        <p><strong>Nhân Viên:</strong> ${hd.ten_nv} (${hd.ma_nv})</p>
+                        <p><strong>Nhân Viên:</strong> ${hd.ten_nv || ''} (${hd.ma_nv || 'N/A'})</p>
                     </div>
                     <div style="text-align: right;">
                         <p><strong>Ngày nhận:</strong> ${new Date(hd.ngay_nhan).toLocaleDateString('vi-VN')}</p>
@@ -607,7 +623,17 @@
                 </table>
 
                 <div class="total">
-                    <p>TỔNG THANH TOÁN: ${Number(hd.thanh_tien || 0).toLocaleString('vi-VN')} VNĐ</p>
+                    <div class="total-box">
+                        <div style="display: flex; justify-content: space-between; font-size: 16px; margin-bottom: 5px;">
+                            <span>Tổng tiền dịch vụ:</span>
+                            <span>${tongTienGoc.toLocaleString('vi-VN')} VNĐ</span>
+                        </div>
+                        ${giamGiaHTML}
+                        <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 20px; color: #c0392b; margin-top: 10px; border-top: 2px dashed #ccc; padding-top: 10px;">
+                            <span>CẦN THANH TOÁN:</span>
+                            <span>${Number(hd.thanh_tien || 0).toLocaleString('vi-VN')} VNĐ</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="footer">
@@ -688,13 +714,9 @@
         } catch(e) { document.getElementById('bodyLichSu').innerHTML = '<tr><td colspan="7" style="color:red;">Lỗi tải dữ liệu!</td></tr>'; }
     }
 
-    // ====================================================================
-    // ĐÃ NÂNG CẤP: BẢNG HIỂN THỊ MÃ GIẢM GIÁ (Thêm hiển thị Đơn Tối Thiểu)
-    // ====================================================================
     async function loadGiamGia() {
         const res = await fetch(API+'/giamgia_all'); const ds = await res.json();
         document.querySelector('#tableGG tbody').innerHTML = ds.map(g => {
-            // Cắt chuỗi dieu_kien ra để hiển thị cho đẹp
             let parts = (g.dieu_kien || "").split('|');
             let doiTuong = parts[0] || "Tất cả";
             let toiThieuText = parts.length > 1 && parts[1] > 0 ? Number(parts[1]).toLocaleString('vi-VN') + 'đ' : '0đ';
@@ -716,7 +738,6 @@
         const dk = document.getElementById('dkGG').value;
         const min = document.getElementById('minGG').value || 0;
         
-        // Gộp chung Đối Tượng và Số Tiền Tối Thiểu lại bằng dấu | để nhét chung vào cột dieu_kien
         const dieu_kien_gop = dk + '|' + min;
 
         const body = {
