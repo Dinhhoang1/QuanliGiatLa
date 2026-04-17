@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Quản Lí Giặt Là</title>
+    <title>GIẶT LÀ PRO - Quản lý 9 bảng</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; margin: 0; height: 100vh; }
         .sidebar { width: 250px; background: #1c2a38; color: white; padding: 20px; }
@@ -89,7 +89,8 @@
                     <th>Đơn Đặt</th>
                     <th>Hóa Đơn</th>
                     <th>Khách</th>
-                    <th>Nhân Viên</th> <th>Hẹn Trả</th>
+                    <th>Nhân Viên</th>
+                    <th>Hẹn Trả</th>
                     <th>Dịch Vụ Đã Đặt</th>
                     <th>Tiền</th>
                     <th>Trạng Thái</th>
@@ -112,12 +113,14 @@
     <div id="tab-giam-gia" class="card manager-only">
         <h2>🎁 Quản Lý Mã Giảm Giá</h2>
         <div style="background: #fdf2e9; padding: 15px; border-radius: 5px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-            <input type="text" id="tenGG" placeholder="Tên CT" style="flex: 2;">
+            <input type="text" id="tenGG" placeholder="Tên Chương Trình" style="flex: 2;">
             <input type="number" id="ptGG" placeholder="% Giảm" min="1" max="100" style="flex: 1;">
             <select id="dkGG" style="flex: 2;">
                 <option value="Tất cả">Áp dụng: Tất cả khách hàng</option>
                 <option value="Khách VIP">Áp dụng: Chỉ Khách VIP</option>
             </select>
+            <input type="number" id="minGG" placeholder="Đơn từ (VNĐ)" min="0" style="flex: 1;" title="Đơn hàng tối thiểu để áp dụng">
+            
             <input type="date" id="bdGG" style="flex: 1;" title="Ngày bắt đầu">
             <input type="date" id="ktGG" style="flex: 1;" title="Ngày kết thúc">
             <button onclick="themGiamGiaMoi()" style="background: #2ecc71;">+ Tạo Mã</button>
@@ -171,13 +174,11 @@
 <div id="modalThanhToan" class="modal">
     <div class="modal-content" style="width: 60%;">
         <h3>Quản Lý Thanh Toán - Hóa Đơn: <span id="ttMaHD" style="color: #2980b9;"></span></h3>
-        
         <div style="background: #fdf2e9; padding: 15px; border-radius: 5px; margin-bottom: 15px; display: flex; justify-content: space-between; font-size: 16px;">
             <div><strong>Tổng tiền HĐ:</strong> <span id="ttTongTien" style="color: #2c3e50; font-weight: bold;">0</span> đ</div>
             <div><strong>Đã trả:</strong> <span id="ttDaTra" style="color: #27ae60; font-weight: bold;">0</span> đ</div>
             <div><strong>CÒN NỢ:</strong> <span id="ttConNo" style="color: #c0392b; font-weight: bold; font-size: 18px;">0</span> đ</div>
         </div>
-
         <div style="background: #e8f4f8; padding: 15px; border-radius: 5px; display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
             <input type="number" id="tienThanhToan" placeholder="Nhập số tiền khách đưa..." style="flex: 2; border: 2px solid #3498db; font-weight:bold;">
             <select id="phuongThucTT" style="flex: 1; border: 2px solid #3498db;">
@@ -191,13 +192,11 @@
             </select>
             <button onclick="ghiNhanThanhToan()" style="background: #2ecc71; padding: 10px 20px;">+ Ghi nhận</button>
         </div>
-
         <h4>Lịch sử trả tiền của đơn này:</h4>
         <table id="tableLichSuTT">
             <thead><tr><th>Mã GD</th><th>Ngày Trả</th><th>Số Tiền</th><th>Phương Thức</th><th>Ghi Chú</th></tr></thead>
             <tbody id="bodyLichSuTT"></tbody>
         </table>
-        
         <div style="text-align: right; margin-top: 20px;">
             <button onclick="document.getElementById('modalThanhToan').style.display='none'" style="background: #e74c3c; padding: 10px 20px;">Đóng</button>
         </div>
@@ -332,6 +331,9 @@
         tinhTongTien();
     }
 
+    // ====================================================================
+    // ĐÃ NÂNG CẤP: KIỂM TRA ĐIỀU KIỆN TỔNG TIỀN TRƯỚC KHI HIỆN MÃ GIẢM GIÁ
+    // ====================================================================
     function capNhatDropdownGiamGia() {
         const selectGG = document.getElementById('ggSelect'); 
         const maDangChon = selectGG.value;
@@ -339,14 +341,24 @@
         const loaiKhachText = loaiKhachSelect.options[loaiKhachSelect.selectedIndex] ? loaiKhachSelect.options[loaiKhachSelect.selectedIndex].text : '';
 
         let opt = '<option value="0" data-phantram="0">Không dùng giảm giá</option>';
+        
         dsGiamGia.forEach(gg => {
-            let laMaVIP = gg.dieu_kien.toLowerCase().includes('vip');
-            let khachLaVIP = loaiKhachText.toLowerCase().includes('vip');
+            // Tách dữ liệu gộp để lấy Đối tượng và Đơn tối thiểu
+            let parts = (gg.dieu_kien || "").split('|');
+            let doiTuong = parts[0] || "";
+            let toiThieu = parts.length > 1 ? Number(parts[1]) : 0;
 
-            if (!laMaVIP || (laMaVIP && khachLaVIP)) {
+            let laMaVIP = doiTuong.toLowerCase().includes('vip');
+            let khachLaVIP = loaiKhachText.toLowerCase().includes('vip');
+            
+            // ĐIỀU KIỆN CHỐNG LỖI MỚI: Khách phải mua đủ số tiền tối thiểu mới được thấy mã
+            let duTien = tongChuaGiam >= toiThieu;
+
+            if ((!laMaVIP || (laMaVIP && khachLaVIP)) && duTien) {
                 opt += `<option value="${gg.ma_gg}" data-phantram="${gg.phan_tram}">${gg.ten_chuong_trinh} (-${gg.phan_tram}%)</option>`;
             }
         });
+        
         selectGG.innerHTML = opt; 
         selectGG.value = selectGG.querySelector(`option[value="${maDangChon}"]`) ? maDangChon : "0";
     }
@@ -555,7 +567,7 @@
             </head>
             <body>
                 <div class="header">
-                    <h1>Tiệm Giặt Là</h1>
+                    <h1>GIẶT LÀ PRO</h1>
                     <p>Chuyên nghiệp - Nhanh chóng - Tận tâm</p>
                 </div>
                 
@@ -676,25 +688,64 @@
         } catch(e) { document.getElementById('bodyLichSu').innerHTML = '<tr><td colspan="7" style="color:red;">Lỗi tải dữ liệu!</td></tr>'; }
     }
 
+    // ====================================================================
+    // ĐÃ NÂNG CẤP: BẢNG HIỂN THỊ MÃ GIẢM GIÁ (Thêm hiển thị Đơn Tối Thiểu)
+    // ====================================================================
     async function loadGiamGia() {
         const res = await fetch(API+'/giamgia_all'); const ds = await res.json();
-        document.querySelector('#tableGG tbody').innerHTML = ds.map(g => `<tr>
-            <td>${g.ma_gg}</td><td>${g.ten_chuong_trinh}</td><td style="color:red;font-weight:bold;">${g.phan_tram}%</td>
-            <td>${g.dieu_kien}</td><td>${new Date(g.ngay_bat_dau).toLocaleDateString('vi-VN')} - ${new Date(g.ngay_ket_thuc).toLocaleDateString('vi-VN')}</td>
-            <td><button onclick="xoaGG('${g.ma_gg}')" style="background:#e74c3c;padding:5px; color:white; border:none; cursor:pointer; border-radius:3px;">Xóa</button></td>
-        </tr>`).join('');
+        document.querySelector('#tableGG tbody').innerHTML = ds.map(g => {
+            // Cắt chuỗi dieu_kien ra để hiển thị cho đẹp
+            let parts = (g.dieu_kien || "").split('|');
+            let doiTuong = parts[0] || "Tất cả";
+            let toiThieuText = parts.length > 1 && parts[1] > 0 ? Number(parts[1]).toLocaleString('vi-VN') + 'đ' : '0đ';
+
+            return `<tr>
+                <td>${g.ma_gg}</td>
+                <td>${g.ten_chuong_trinh}</td>
+                <td style="color:red;font-weight:bold;">${g.phan_tram}%</td>
+                <td>${doiTuong} <br> <small style="color:gray;">Đơn từ: ${toiThieuText}</small></td>
+                <td>${new Date(g.ngay_bat_dau).toLocaleDateString('vi-VN')} - ${new Date(g.ngay_ket_thuc).toLocaleDateString('vi-VN')}</td>
+                <td><button onclick="xoaGG('${g.ma_gg}')" style="background:#e74c3c;padding:5px; color:white; border:none; cursor:pointer; border-radius:3px;">Xóa</button></td>
+            </tr>`;
+        }).join('');
     }
 
     async function themGiamGiaMoi() {
+        const tenCT = document.getElementById('tenGG').value;
+        const pt = document.getElementById('ptGG').value;
+        const dk = document.getElementById('dkGG').value;
+        const min = document.getElementById('minGG').value || 0;
+        
+        // Gộp chung Đối Tượng và Số Tiền Tối Thiểu lại bằng dấu | để nhét chung vào cột dieu_kien
+        const dieu_kien_gop = dk + '|' + min;
+
         const body = {
-            ten_chuong_trinh: document.getElementById('tenGG').value, phan_tram: document.getElementById('ptGG').value,
-            dieu_kien: document.getElementById('dkGG').value, ngay_bat_dau: document.getElementById('bdGG').value, ngay_ket_thuc: document.getElementById('ktGG').value
+            ten_chuong_trinh: tenCT, 
+            phan_tram: pt,
+            dieu_kien: dieu_kien_gop, 
+            ngay_bat_dau: document.getElementById('bdGG').value, 
+            ngay_ket_thuc: document.getElementById('ktGG').value
         };
         await fetch(API+'/giamgia', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
         alert("Đã thêm mã!"); loadGiamGia(); init(); 
     }
     
-    async function xoaGG(id) { if(confirm('Xóa mã này?')) { await fetch(API+'/giamgia/'+id, {method:'DELETE'}); loadGiamGia(); init(); } }
+    async function xoaGG(id) { 
+        if(confirm('Bạn có chắc chắn muốn xóa mã ' + id + ' này?')) { 
+            try {
+                const res = await fetch(API+'/giamgia/'+id, {method:'DELETE'}); 
+                const data = await res.json();
+                if (data.error) {
+                    alert(data.error); 
+                } else {
+                    alert(data.message || "Đã xóa thành công!");
+                    loadGiamGia(); init(); 
+                }
+            } catch(e) {
+                alert("Lỗi kết nối đến Server!");
+            }
+        } 
+    }
 
     async function loadNhanVien() { 
         const res = await fetch(API+'/nhanvien'); const ds = await res.json(); 
