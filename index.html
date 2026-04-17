@@ -20,6 +20,18 @@
         .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 1000;}
         .modal-content { background:white; width:70%; margin: 5% auto; padding: 25px; border-radius: 8px; max-height: 80vh; overflow-y: auto;}
         .btn-history { background: #9b59b6; padding: 5px 10px; font-size: 13px;}
+        .row-disabled { background-color: #f9f9f9; color: #a6a6a6; }
+
+        /* =========================================
+           ĐÃ THÊM: CSS CHO NÚT GẠT TOGGLE 
+        ========================================= */
+        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #bdc3c7; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #e74c3c; } /* Màu đỏ khi bật quyền Quản lý */
+        input:checked + .slider:before { transform: translateX(24px); }
+        .toggle-container { display: flex; align-items: center; justify-content: center; gap: 10px; color: white; font-weight: bold; margin-top: 10px; font-size: 14px;}
     </style>
 </head>
 <body>
@@ -36,11 +48,15 @@
     <div class="menu-item manager-only" onclick="showTab('tab-nhan-vien')">👨‍💼 Nhân Viên</div>
 
     <div style="margin-top: 20px; background: #1abc9c; padding: 15px; border-radius: 5px; text-align: center;">
-        <label style="color: white; font-weight: bold;">Quyền hệ thống:</label>
-        <select id="roleSelect" onchange="changeRole()" style="width: 100%;">
-            <option value="NV01">Giao diện Nhân Viên</option>
-            <option value="NV02">Giao diện Quản Lý</option>
-        </select>
+        <label style="color: white; font-weight: bold; display: block;">Chế độ hoạt động:</label>
+        <div class="toggle-container">
+            <span id="labelNV" style="color: #f1c40f;">Nhân viên</span>
+            <label class="switch">
+                <input type="checkbox" id="roleToggle" onchange="changeRole()">
+                <span class="slider"></span>
+            </label>
+            <span id="labelQL">Quản lý</span>
+        </div>
     </div>
 </div>
 
@@ -255,8 +271,17 @@
     tomorrow.setDate(tomorrow.getDate() + 1);
     document.getElementById('ngayHen').value = tomorrow.toISOString().split('T')[0];
 
+    // =========================================================
+    // ĐÃ SỬA: Hàm đọc trạng thái từ nút gạt Toggle
+    // =========================================================
     function changeRole() {
-        const role = document.getElementById('roleSelect').value;
+        const isManager = document.getElementById('roleToggle').checked;
+        const role = isManager ? 'NV02' : 'NV01';
+        
+        // Đổi màu chữ để báo hiệu đang ở quyền nào
+        document.getElementById('labelNV').style.color = isManager ? 'white' : '#f1c40f';
+        document.getElementById('labelQL').style.color = isManager ? '#f1c40f' : 'white';
+
         document.querySelectorAll('.menu-item.manager-only').forEach(el => {
             el.style.display = role === 'NV02' ? 'block' : 'none';
         });
@@ -288,7 +313,11 @@
         const nvs = await resNV.json();
 
         document.getElementById('dvSelect').innerHTML = dsDichVu.map(d => `<option value="${d.ma_dv}">${d.ten_dv} - ${Number(d.don_gia).toLocaleString()}đ</option>`).join('');
-        document.getElementById('nvSelect').innerHTML = nvs.map(n => `<option value="${n.ma_nv}">${n.ten_nv} (${n.chuc_vu})</option>`).join('');
+        
+        document.getElementById('nvSelect').innerHTML = nvs
+            .filter(n => n.chuc_vu !== 'Nghỉ việc') 
+            .map(n => `<option value="${n.ma_nv}">${n.ten_nv} (${n.chuc_vu})</option>`).join('');
+            
         document.getElementById('ma_loai').innerHTML = dsLoaiKhach.map(l => `<option value="${l.ma_loai}">${l.ten_loai}</option>`).join('');
         
         capNhatDropdownGiamGia();
@@ -444,6 +473,24 @@
         </tr>`).join('');
         
         document.getElementById('modal').style.display='block';
+
+        try {
+            await fetch(`${API}/hoadon/${id}`, { 
+                method: 'PUT', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ trang_thai: 'Hoàn thành' }) 
+            });
+
+            const hd = dsHoaDonGoc.find(x => x.ma_hd === id);
+            if (hd) hd.trang_thai = 'Hoàn thành';
+
+            const selectBox = document.getElementById('status-' + id);
+            if (selectBox) selectBox.value = 'Hoàn thành';
+
+            loadKhachHang();
+        } catch(e) {
+            console.log("Lỗi tự động hoàn thành:", e);
+        }
     }
 
     async function moModalThanhToan(ma_hd, tong_tien) {
@@ -522,9 +569,6 @@
         }
     }
 
-    // =========================================================
-    // IN HÓA ĐƠN KÈM MÃ GIẢM GIÁ (ĐÃ ĐƯỢC CHUẨN HÓA LẠI)
-    // =========================================================
     async function inHoaDon() {
         const ma_hd = document.getElementById('modalID').innerText;
         const hd = dsHoaDonGoc.find(x => x.ma_hd === ma_hd);
@@ -545,11 +589,9 @@
         const res = await fetch(`${API}/hoadon/${ma_hd}/chitiet`);
         const chiTiet = await res.json();
 
-        // Tính toán lại tổng tiền trước khi giảm
         const tongTienGoc = chiTiet.reduce((sum, c) => sum + (c.so_luong * c.don_gia), 0);
         let giamGiaHTML = '';
         
-        // Nếu có mã giảm giá thì in ra tên mã và số tiền được trừ
         if (hd.ma_gg) {
             const ggInfo = dsGiamGia.find(g => g.ma_gg === hd.ma_gg);
             const tenGG = ggInfo ? ggInfo.ten_chuong_trinh : hd.ma_gg;
@@ -576,7 +618,7 @@
                     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
                     th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
                     th { background: #f4f6f9; color: #2c3e50; }
-                    .total { margin-top: 20px; text-align: right; width: 100%; }
+                    .total { margin-top: 20px; text-align: right; width: 100%; display: flex; justify-content: flex-end; }
                     .total-box { display: inline-block; text-align: left; min-width: 300px; }
                     .footer { text-align: center; margin-top: 50px; font-style: italic; color: #7f8c8d; }
                 </style>
@@ -721,13 +763,17 @@
             let doiTuong = parts[0] || "Tất cả";
             let toiThieuText = parts.length > 1 && parts[1] > 0 ? Number(parts[1]).toLocaleString('vi-VN') + 'đ' : '0đ';
 
-            return `<tr>
+            let isExpired = new Date(g.ngay_ket_thuc) < new Date(new Date().toDateString());
+            let rowClass = isExpired ? 'class="row-disabled"' : '';
+            let statusText = isExpired ? '<br><small style="color:#e74c3c; font-weight:bold;">(Đã ẩn/Hết hạn)</small>' : '';
+
+            return `<tr ${rowClass}>
                 <td>${g.ma_gg}</td>
-                <td>${g.ten_chuong_trinh}</td>
+                <td>${g.ten_chuong_trinh} ${statusText}</td>
                 <td style="color:red;font-weight:bold;">${g.phan_tram}%</td>
                 <td>${doiTuong} <br> <small style="color:gray;">Đơn từ: ${toiThieuText}</small></td>
                 <td>${new Date(g.ngay_bat_dau).toLocaleDateString('vi-VN')} - ${new Date(g.ngay_ket_thuc).toLocaleDateString('vi-VN')}</td>
-                <td><button onclick="xoaGG('${g.ma_gg}')" style="background:#e74c3c;padding:5px; color:white; border:none; cursor:pointer; border-radius:3px;">Xóa</button></td>
+                <td><button onclick="xoaGG('${g.ma_gg}')" style="background:#e74c3c;padding:5px; color:white; border:none; cursor:pointer; border-radius:3px;" ${isExpired ? 'disabled' : ''}>Xóa</button></td>
             </tr>`;
         }).join('');
     }
@@ -756,32 +802,32 @@
             try {
                 const res = await fetch(API+'/giamgia/'+id, {method:'DELETE'}); 
                 const data = await res.json();
-                if (data.error) {
-                    alert(data.error); 
-                } else {
+                if (data.error) { alert(data.error); } else {
                     alert(data.message || "Đã xóa thành công!");
                     loadGiamGia(); init(); 
                 }
-            } catch(e) {
-                alert("Lỗi kết nối đến Server!");
-            }
+            } catch(e) { alert("Lỗi kết nối đến Server!"); }
         } 
     }
 
     async function loadNhanVien() { 
         const res = await fetch(API+'/nhanvien'); const ds = await res.json(); 
-        document.querySelector('#tableNV tbody').innerHTML = ds.map(n => `<tr>
-            <td>${n.ma_nv}</td>
-            <td><b>${n.ten_nv}</b></td>
-            <td>${n.sdt}</td>
-            <td>
-                <span style="background: ${n.chuc_vu === 'Quản lý' ? '#e74c3c' : '#2ecc71'}; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;">
-                    ${n.chuc_vu}
-                </span>
-            </td>
-            <td style="font-weight:bold; color:#2980b9;">${Number(n.luong).toLocaleString('vi-VN')}đ</td>
-            <td><button onclick="xoaNhanVien('${n.ma_nv}')" style="background:#e74c3c; padding:5px 10px; border-radius:3px; color: white; cursor:pointer; border:none;">Xóa</button></td>
-        </tr>`).join(''); 
+        document.querySelector('#tableNV tbody').innerHTML = ds.map(n => {
+            let badgeColor = '#2ecc71';
+            if (n.chuc_vu === 'Quản lý') badgeColor = '#e74c3c';
+            if (n.chuc_vu === 'Nghỉ việc') badgeColor = '#7f8c8d';
+            
+            let rowClass = n.chuc_vu === 'Nghỉ việc' ? 'class="row-disabled"' : '';
+
+            return `<tr ${rowClass}>
+                <td>${n.ma_nv}</td>
+                <td><b>${n.ten_nv}</b></td>
+                <td>${n.sdt}</td>
+                <td><span style="background: ${badgeColor}; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;">${n.chuc_vu}</span></td>
+                <td style="font-weight:bold; color:#2980b9;">${Number(n.luong).toLocaleString('vi-VN')}đ</td>
+                <td><button onclick="xoaNhanVien('${n.ma_nv}')" style="background:#e74c3c; padding:5px 10px; border-radius:3px; color: white; cursor:pointer; border:none;" ${n.chuc_vu === 'Nghỉ việc' ? 'disabled' : ''}>Xóa</button></td>
+            </tr>`;
+        }).join(''); 
     }
 
     async function themNhanVienMoi() {
